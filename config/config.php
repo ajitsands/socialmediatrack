@@ -2,6 +2,20 @@
 // ─────────────────────────────────────────────
 //  Application Config & Request Helpers
 // ─────────────────────────────────────────────
+// Load local configuration overrides if available (before session starts)
+$localConfig = __DIR__ . '/local.php';
+if (file_exists($localConfig)) {
+    require_once $localConfig;
+}
+
+// Custom session save path override for restricted environments
+if (defined('SESSION_SAVE_PATH')) {
+    if (!is_dir(SESSION_SAVE_PATH)) {
+        mkdir(SESSION_SAVE_PATH, 0755, true);
+    }
+    session_save_path(SESSION_SAVE_PATH);
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_name('INFLUX_SESS');
     session_start();
