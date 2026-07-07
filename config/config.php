@@ -13,8 +13,14 @@ ini_set('log_errors', '1');
 ini_set('error_log', dirname(__DIR__) . '/error_log');
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
 
+// Security Headers (moved from .htaccess to prevent Apache 500 errors)
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
 define('APP_NAME',     'InfluX Portal');
+
 define('APP_VERSION',  '1.0.0');
 
 // Detect base URL dynamically
