@@ -140,41 +140,54 @@ App.Admin.Campaigns = (function ($) {
   function loadInfluencers() {
     App.api.users.categories().done(function(cRes){
       var catOpts = cRes.data.map(function(c){ return `<option value="${c.name}">${c.name}</option>`; }).join('');
-      $('#inf-cat-filter').append(catOpts);
+      $('#inf-cat-filter').html('<option value="">🏷️ All Categories / Niches</option>').append(catOpts);
 
       App.api.users.list().done(function(res){
-        _allInfluencers = res.data.filter(function(u){ return u.status==='active'; });
+        _allInfluencers = (res.data || []).filter(function(u){ return u && u.status==='active'; });
         filterAndRenderSearch();
+      }).fail(function(err){
+        console.error('[loadInfluencers list error]', err);
+        $('#influencer-search-results').html('<span style="color:var(--danger)">Failed to load influencers list.</span>');
       });
+    }).fail(function(err){
+      console.error('[loadInfluencers categories error]', err);
+      $('#influencer-search-results').html('<span style="color:var(--danger)">Failed to load categories.</span>');
     });
   }
 
   function filterAndRenderSearch() {
-    var query = $('#inf-search').val().toLowerCase().trim();
-    var cat = $('#inf-cat-filter').val();
+    try {
+      var query = $('#inf-search').val().toLowerCase().trim();
+      var cat = $('#inf-cat-filter').val();
 
-    var filtered = _allInfluencers.filter(function(u){
-      var matchQuery = !query || u.name.toLowerCase().indexOf(query) !== -1 || (u.platforms_list && u.platforms_list.toLowerCase().indexOf(query) !== -1);
-      
-      var matchCat = true;
-      if (cat) {
-        matchCat = u.categories_list && u.categories_list.indexOf(cat) !== -1;
-      }
+      var filtered = _allInfluencers.filter(function(u){
+        if (!u) return false;
+        var uName = u.name || '';
+        var matchQuery = !query || uName.toLowerCase().indexOf(query) !== -1 || (u.platforms_list && u.platforms_list.toLowerCase().indexOf(query) !== -1);
+        
+        var matchCat = true;
+        if (cat) {
+          matchCat = u.categories_list && u.categories_list.indexOf(cat) !== -1;
+        }
 
-      var notSelected = _selectedInfluencers.indexOf(parseInt(u.id)) === -1;
+        var notSelected = _selectedInfluencers.indexOf(parseInt(u.id)) === -1;
 
-      return matchQuery && matchCat && notSelected;
-    });
+        return matchQuery && matchCat && notSelected;
+      });
 
-    var html = filtered.map(function(u){
-      var cats = u.categories_list ? u.categories_list.split(',').map(function(c){ return `<span style="font-size:0.7rem;background:var(--primary-light);color:var(--primary);padding:2px 6px;border-radius:4px">${c}</span>`; }).join(' ') : '';
-      return `
-        <button type="button" class="btn btn-secondary btn-sm btn-add-selected-inf" data-id="${u.id}" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:#fff">
-          <strong>＋ ${u.name}</strong> ${cats}
-        </button>`;
-    }).join('');
+      var html = filtered.map(function(u){
+        var cats = u.categories_list ? u.categories_list.split(',').map(function(c){ return `<span style="font-size:0.7rem;background:var(--primary-light);color:var(--primary);padding:2px 6px;border-radius:4px">${c}</span>`; }).join(' ') : '';
+        return `
+          <button type="button" class="btn btn-secondary btn-sm btn-add-selected-inf" data-id="${u.id}" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:#fff">
+            <strong>＋ ${u.name}</strong> ${cats}
+          </button>`;
+      }).join('');
 
-    $('#influencer-search-results').html(html || '<span style="color:var(--text-muted);font-size:0.9rem;padding:4px">No matching influencers found...</span>');
+      $('#influencer-search-results').html(html || '<span style="color:var(--text-muted);font-size:0.9rem;padding:4px">No matching influencers found...</span>');
+    } catch (err) {
+      console.error('[filterAndRenderSearch Error]', err);
+      $('#influencer-search-results').html('<span style="color:var(--danger);font-size:0.9rem;padding:4px">Error rendering search: ' + err.message + '</span>');
+    }
   }
 
   function renderSelectedInfluencers() {
