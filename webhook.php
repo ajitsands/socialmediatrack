@@ -40,11 +40,31 @@ if (!in_array($branch, ['refs/heads/main', 'refs/heads/master'])) {
 }
 
 // ─── Pull latest code ─────────────────────────
-$dir    = escapeshellarg(REPO_DIR);
-$cmd    = "cd {$dir} && git fetch --all 2>&1 && git reset --hard origin/main 2>&1";
-$output = shell_exec($cmd);
+$dir = REPO_DIR;
+$log_output = "";
 
-log_webhook('DEPLOY', $output ?? 'no output');
+// 1. Check if .git exists, if not initialize it
+if (!is_dir($dir . '/.git')) {
+    $log_output .= "[INIT] Initializing git repository...\n";
+    $log_output .= shell_exec("cd " . escapeshellarg($dir) . " && git init 2>&1") . "\n";
+}
+
+// 2. Set/Update remote origin URL
+$log_output .= "[REMOTE] Configuring remote origin...\n";
+shell_exec("cd " . escapeshellarg($dir) . " && git remote remove origin 2>&1");
+$log_output .= shell_exec("cd " . escapeshellarg($dir) . " && git remote add origin https://github.com/ajitsands/socialmediatrack.git 2>&1") . "\n";
+
+// 3. Fetch origin main specifically
+$log_output .= "[FETCH] Fetching main branch...\n";
+$log_output .= shell_exec("cd " . escapeshellarg($dir) . " && git fetch origin main 2>&1") . "\n";
+
+// 4. Hard reset to origin/main
+$log_output .= "[RESET] Hard resetting to origin/main...\n";
+$output = shell_exec("cd " . escapeshellarg($dir) . " && git reset --hard origin/main 2>&1");
+$log_output .= $output . "\n";
+
+log_webhook('DEPLOY', $log_output);
+
 
 http_response_code(200);
 header('Content-Type: application/json');
