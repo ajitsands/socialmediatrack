@@ -110,7 +110,10 @@ App.Admin.Influencers = (function ($) {
                 </div>
                 
                 <div class="form-group" style="margin-top:16px">
-                  <label class="form-label" style="font-weight:700">🏷️ Categories / Niches</label>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <label class="form-label" style="margin-bottom:0;font-weight:700">🏷️ Categories / Niches</label>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-create-category-prompt" style="padding:2px 8px;font-size:0.75rem">➕ Create Category</button>
+                  </div>
                   <div id="categories-checkboxes-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;max-height:150px;overflow-y:auto;background:var(--table-stripe)">
                     <!-- Dynamic checkboxes -->
                   </div>
@@ -247,6 +250,44 @@ App.Admin.Influencers = (function ($) {
     // Remove platform row button
     $(document).off('click', '.btn-remove-platform-row').on('click', '.btn-remove-platform-row', function(){
       $(this).closest('.platform-row').remove();
+    });
+
+    // Create custom category prompt
+    $(document).off('click', '#btn-create-category-prompt').on('click', '#btn-create-category-prompt', function(){
+      Swal.fire({
+        title: 'Create New Category',
+        text: 'Enter the category name (you can include an emoji at the start, e.g. 🎬 Entertainment):',
+        input: 'text',
+        inputPlaceholder: 'e.g. ✈️ Travel or ⚽ Sports',
+        showCancelButton: true,
+        confirmButtonText: 'Create',
+        confirmButtonColor: '#6C63FF',
+        inputValidator: function(value) {
+          if (!value || !value.trim()) {
+            return 'Category name cannot be empty!';
+          }
+        }
+      }).then(function(result) {
+        if (result.isConfirmed && result.value) {
+          var newName = result.value.trim();
+          App.api.users.createCategory(newName)
+            .done(function(res) {
+              Swal.fire({ icon: 'success', title: res.message, showConfirmButton: false, timer: 1500 });
+              
+              // Remember currently checked categories in the modal
+              var checkedIds = [];
+              $('.inf-cat-checkbox:checked').each(function(){
+                checkedIds.push(parseInt($(this).val()));
+              });
+
+              // Reload all categories and re-render checkboxes
+              loadCategories().done(function(){
+                renderCategoryCheckboxes(checkedIds);
+              });
+            })
+            .fail(App.api.handleError);
+        }
+      });
     });
 
     // Open add modal

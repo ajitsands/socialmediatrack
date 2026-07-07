@@ -68,6 +68,7 @@ App.api = (function ($) {
     delete:        function (id){ return _request('users', 'delete', {id: id}, 'POST'); },
     toggleStatus:  function (id){ return _request('users', 'toggle_status', {id: id}, 'POST'); },
     categories:    function ()  { return _request('users', 'categories', {}, 'GET'); },
+    createCategory:function (name){ return _request('users', 'create_category', {name: name}, 'POST'); },
   };
 
   /* ── Products ────────────────────────────── */

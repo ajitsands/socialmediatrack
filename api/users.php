@@ -193,4 +193,21 @@ if ($action === 'categories') {
     apiSuccess($stmt->fetchAll());
 }
 
+// ─── Create Category ──────────────────────────
+if ($action === 'create_category') {
+    $name = sanitize($input['name'] ?? '');
+    if (!$name) apiError('Category name is required.');
+    
+    // Check duplicate
+    $chk = $db->prepare("SELECT id FROM influencer_categories WHERE name=?");
+    $chk->execute([$name]);
+    if ($chk->fetch()) apiError('Category already exists.');
+    
+    $stmt = $db->prepare("INSERT INTO influencer_categories (name) VALUES (?)");
+    $stmt->execute([$name]);
+    $newId = $db->lastInsertId();
+    
+    apiSuccess(['id' => $newId, 'name' => $name], 'Category created successfully');
+}
+
 apiError('Invalid action');
