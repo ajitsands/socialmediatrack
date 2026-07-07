@@ -8,6 +8,7 @@ App.Admin = App.Admin || {};
 App.Admin.Campaigns = (function ($) {
   'use strict';
   var _dt = null;
+  var platformIcons = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐' };
 
   function init() {
     if (!App.auth.requireAuth('admin')) return;
