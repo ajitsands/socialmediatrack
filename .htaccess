@@ -2,8 +2,7 @@ Options -Indexes
 ServerSignature Off
 
 # ─── PHP Settings ────────────────────────────
-php_flag display_errors Off
-php_flag log_errors On
+# Managed inside config.php dynamically
 
 # ─── Security Headers ────────────────────────
 <IfModule mod_headers.c>
@@ -13,11 +12,6 @@ php_flag log_errors On
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# ─── Protect config directory ────────────────
-<DirectoryMatch "^/.*(config).*$">
-    Order allow,deny
-    Deny from all
-</DirectoryMatch>
 
 # ─── Protect log files ───────────────────────
 <FilesMatch "\.(log|txt|sql|sh|env)$">

@@ -7,6 +7,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Ensure PHP error settings are safe for production and FPM/CGI servers
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', dirname(__DIR__) . '/error_log');
+error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
+
+
 define('APP_NAME',     'InfluX Portal');
 define('APP_VERSION',  '1.0.0');
 
