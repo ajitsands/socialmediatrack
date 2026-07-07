@@ -9,6 +9,8 @@ App.Admin.Campaigns = (function ($) {
   'use strict';
   var _dt = null;
   var platformIcons = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐' };
+  var _allInfluencers = [];
+  var _selectedInfluencers = [];
 
   function init() {
     if (!App.auth.requireAuth('admin')) return;
