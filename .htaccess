@@ -1,5 +1,6 @@
-Options -Indexes
-ServerSignature Off
+# Options -Indexes
+# ServerSignature Off
+
 
 # ─── PHP Settings ────────────────────────────
 # Managed inside config.php dynamically
