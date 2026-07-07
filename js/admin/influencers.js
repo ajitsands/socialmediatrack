@@ -12,11 +12,34 @@ App.Admin.Influencers = (function ($) {
 
   var platformIcons = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐' };
 
+  var _categories = [];
+
   function init() {
     if (!App.auth.requireAuth('admin')) return;
     render();
-    loadTable();
+    loadCategories().done(function(){
+      loadTable();
+    });
     bindEvents();
+  }
+
+  function loadCategories() {
+    return App.api.users.categories().done(function(res){
+      _categories = res.data;
+    });
+  }
+
+  function renderCategoryCheckboxes(selectedIds) {
+    selectedIds = selectedIds || [];
+    var html = _categories.map(function(cat){
+      var checked = selectedIds.indexOf(parseInt(cat.id)) !== -1 ? 'checked' : '';
+      return `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;user-select:none">
+          <input type="checkbox" class="inf-cat-checkbox" value="${cat.id}" ${checked} style="width:16px;height:16px;accent-color:var(--primary)">
+          <span>${cat.name}</span>
+        </label>`;
+    }).join('');
+    $('#categories-checkboxes-container').html(html || '<span style="color:var(--text-muted)">No categories defined</span>');
   }
 
   function render() {
@@ -39,7 +62,7 @@ App.Admin.Influencers = (function ($) {
               <thead>
                 <tr>
                   <th>#</th><th>${t('name')}</th><th>${t('email')}</th>
-                  <th>${t('phone')}</th><th>${t('platform')}</th>
+                  <th>${t('phone')}</th><th>Categories</th><th>${t('platform')}</th>
                   <th>Campaigns</th><th>Conversions</th>
                   <th>${t('status')}</th><th>${t('actions')}</th>
                 </tr>
@@ -85,6 +108,14 @@ App.Admin.Influencers = (function ($) {
                     </div>
                   </div>
                 </div>
+                
+                <div class="form-group" style="margin-top:16px">
+                  <label class="form-label" style="font-weight:700">🏷️ Categories / Niches</label>
+                  <div id="categories-checkboxes-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:8px;max-height:150px;overflow-y:auto;background:var(--table-stripe)">
+                    <!-- Dynamic checkboxes -->
+                  </div>
+                </div>
+
                 <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;margin-bottom:16px">
                   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                     <label class="form-label" style="margin-bottom:0;font-weight:700">📱 Social Media Accounts</label>
@@ -145,6 +176,13 @@ App.Admin.Influencers = (function ($) {
             },
             { data: 'email' },
             { data: 'phone', render: function(d,t,r){ return (r.country_code||'')+' '+(d||'—'); }},
+            { data: 'categories_list', render: function(d){
+                if (!d) return '<span class="badge badge-muted">—</span>';
+                return `<div style="display:flex;gap:4px;flex-wrap:wrap">` + d.split(',').map(function(c){
+                  return `<span class="badge" style="background:var(--primary-light);color:var(--primary);font-size:0.75rem;padding:2px 6px">${c}</span>`;
+                }).join('') + `</div>`;
+              }
+            },
             { data: 'platforms_list', render: function(d){
                 if (!d) return '<span class="badge badge-muted">None</span>';
                 var html = '<div style="display:flex;gap:4px;flex-wrap:wrap">';
@@ -219,6 +257,7 @@ App.Admin.Influencers = (function ($) {
       $('#inf-id').val('');
       $('#platform-rows-container').empty();
       addPlatformRow(); // Add one initial blank platform row
+      renderCategoryCheckboxes([]); // Clear selected categories
       $('#pass-req').show(); $('#pass-hint').hide();
       App.countries.renderSelect('inf-country-code', '+973');
       $('#modal-influencer').show();
@@ -240,6 +279,9 @@ App.Admin.Influencers = (function ($) {
         $('#inf-password').val('');
         $('#pass-req').hide(); $('#pass-hint').show();
         App.countries.renderSelect('inf-country-code', r.country_code || '+973');
+
+        // Populate categories
+        renderCategoryCheckboxes(r.categories || []);
 
         // Populate platforms
         $('#platform-rows-container').empty();
@@ -270,6 +312,12 @@ App.Admin.Influencers = (function ($) {
         }
       });
 
+      // Collect categories
+      var categoriesList = [];
+      $('.inf-cat-checkbox:checked').each(function(){
+        categoriesList.push($(this).val());
+      });
+
       var data = {
         id:           $('#inf-id').val() || null,
         name:         $('#inf-name').val(),
@@ -278,7 +326,8 @@ App.Admin.Influencers = (function ($) {
         phone:        $('#inf-phone').val(),
         country_code: $('#inf-country-code').val(),
         status:       $('#inf-status').val(),
-        platforms:    platformsList
+        platforms:    platformsList,
+        categories:   categoriesList
       };
 
       var action = data.id ? App.api.users.update(data) : App.api.users.create(data);

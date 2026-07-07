@@ -52,17 +52,47 @@ App.Admin.Campaigns = (function ($) {
           </div>
 
           <div class="form-group">
-            <label class="form-label">${t('select_influencers')} <span class="req">*</span></label>
-            <div style="display:flex;gap:10px;margin-bottom:10px">
-              <button class="btn btn-secondary btn-sm" id="btn-select-all-inf">☑️ Select All</button>
-              <button class="btn btn-secondary btn-sm" id="btn-clear-all-inf">☐ Clear All</button>
+            <label class="form-label" style="font-weight:700;margin-bottom:12px">👥 ${t('select_influencers')} & Target Platforms</label>
+            
+            <div class="grid-2" style="gap:15px;margin-bottom:15px">
+              <div>
+                <input type="text" class="form-control" id="inf-search" placeholder="🔍 Search influencer by name or handle...">
+              </div>
+              <div>
+                <select class="form-control" id="inf-cat-filter">
+                  <option value="">🏷️ All Categories / Niches</option>
+                </select>
+              </div>
             </div>
-            <div id="influencer-checkboxes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;max-height:280px;overflow-y:auto;padding:4px">
-              <div class="page-loader" style="padding:20px"><div class="spinner"></div></div>
+
+            <div id="influencer-search-results" style="display:flex;flex-wrap:wrap;gap:8px;max-height:120px;overflow-y:auto;margin-bottom:20px;padding:8px;border:1.5px solid var(--border);border-radius:10px;background:var(--table-stripe)">
+              <span style="color:var(--text-muted);font-size:0.9rem;padding:4px">Loading influencers...</span>
+            </div>
+
+            <!-- Table of Selected Influencers -->
+            <div style="margin-top:15px">
+              <h4 style="margin-bottom:10px;font-size:0.95rem;font-weight:700;color:var(--text-muted)">Selected Influencers for Campaign Link Generation:</h4>
+              <div class="table-wrapper" style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+                <table class="dataTable" id="tbl-selected-influencers" style="width:100%;margin:0">
+                  <thead>
+                    <tr style="background:var(--primary-light)">
+                      <th style="font-weight:700">Name</th>
+                      <th style="font-weight:700">Categories</th>
+                      <th style="font-weight:700">Check Platforms to Generate Links</th>
+                      <th style="width:60px;text-align:center;font-weight:700">Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody id="selected-influencers-body">
+                    <tr>
+                      <td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No influencers selected yet. Add them from the search results above.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <div style="display:flex;justify-content:flex-end">
+          <div style="display:flex;justify-content:flex-end;margin-top:20px">
             <button class="btn btn-primary btn-lg" id="btn-generate">
               ⚡ ${t('generate')} Tracking Links
             </button>
@@ -88,7 +118,7 @@ App.Admin.Campaigns = (function ($) {
                 <tr>
                   <th>#</th><th>Influencer</th><th>Product</th>
                   <th>Offer Code</th><th>Clicks</th><th>Conversions</th>
-                  <th>Discount</th><th>Status</th><th>Actions</th>
+                  <th>Discount</th><th>Platform</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -108,39 +138,99 @@ App.Admin.Campaigns = (function ($) {
   }
 
   function loadInfluencers() {
-    App.api.users.list().done(function(res){
-      var html = '';
-      res.data.filter(function(u){ return u.status==='active'; }).forEach(function(u){
-        if (u.platforms_list) {
-          u.platforms_list.split(',').forEach(function(platItem){
-            var parts = platItem.split(':');
-            var platName = parts[0];
-            var handle = parts[1] || '';
-            if (platName) {
-              var icon = platformIcons[platName] || '🌐';
-              html += `
-                <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all 0.2s;background:var(--card)" class="inf-check-card">
-                  <input type="checkbox" class="inf-checkbox" value="${u.id}" data-platform="${platName}" style="width:16px;height:16px;accent-color:var(--primary)">
-                  <div>
-                    <div style="font-weight:600;font-size:0.88rem">${u.name}</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted)">${icon} ${platName.toUpperCase()} • ${handle}</div>
-                  </div>
-                </label>`;
-            }
-          });
-        } else {
-          html += `
-            <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all 0.2s;background:var(--card)" class="inf-check-card">
-              <input type="checkbox" class="inf-checkbox" value="${u.id}" data-platform="other" style="width:16px;height:16px;accent-color:var(--primary)">
-              <div>
-                <div style="font-weight:600;font-size:0.88rem">${u.name}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted)">🌐 Other</div>
-              </div>
-            </label>`;
-        }
+    App.api.users.categories().done(function(cRes){
+      var catOpts = cRes.data.map(function(c){ return `<option value="${c.name}">${c.name}</option>`; }).join('');
+      $('#inf-cat-filter').append(catOpts);
+
+      App.api.users.list().done(function(res){
+        _allInfluencers = res.data.filter(function(u){ return u.status==='active'; });
+        filterAndRenderSearch();
       });
-      $('#influencer-checkboxes').html(html || '<p style="color:var(--text-muted);padding:12px">No active influencers found</p>');
     });
+  }
+
+  function filterAndRenderSearch() {
+    var query = $('#inf-search').val().toLowerCase().trim();
+    var cat = $('#inf-cat-filter').val();
+
+    var filtered = _allInfluencers.filter(function(u){
+      var matchQuery = !query || u.name.toLowerCase().indexOf(query) !== -1 || (u.platforms_list && u.platforms_list.toLowerCase().indexOf(query) !== -1);
+      
+      var matchCat = true;
+      if (cat) {
+        matchCat = u.categories_list && u.categories_list.indexOf(cat) !== -1;
+      }
+
+      var notSelected = _selectedInfluencers.indexOf(parseInt(u.id)) === -1;
+
+      return matchQuery && matchCat && notSelected;
+    });
+
+    var html = filtered.map(function(u){
+      var cats = u.categories_list ? u.categories_list.split(',').map(function(c){ return `<span style="font-size:0.7rem;background:var(--primary-light);color:var(--primary);padding:2px 6px;border-radius:4px">${c}</span>`; }).join(' ') : '';
+      return `
+        <button type="button" class="btn btn-secondary btn-sm btn-add-selected-inf" data-id="${u.id}" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:#fff">
+          <strong>＋ ${u.name}</strong> ${cats}
+        </button>`;
+    }).join('');
+
+    $('#influencer-search-results').html(html || '<span style="color:var(--text-muted);font-size:0.9rem;padding:4px">No matching influencers found...</span>');
+  }
+
+  function renderSelectedInfluencers() {
+    if (_selectedInfluencers.length === 0) {
+      $('#selected-influencers-body').html(`
+        <tr>
+          <td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No influencers selected yet. Add them from the search results above.</td>
+        </tr>`);
+      return;
+    }
+
+    var html = '';
+    _selectedInfluencers.forEach(function(infId){
+      var u = _allInfluencers.find(function(item){ return parseInt(item.id) === infId; });
+      if (!u) return;
+
+      var categoryBadges = u.categories_list ? u.categories_list.split(',').map(function(c){
+        return `<span class="badge" style="background:var(--primary-light);color:var(--primary);font-size:0.75rem;padding:2px 6px">${c}</span>`;
+      }).join(' ') : '<span style="color:var(--text-muted)">—</span>';
+
+      // Build platform checkboxes
+      var platformsHtml = '';
+      if (u.platforms_list) {
+        u.platforms_list.split(',').forEach(function(platItem){
+          var parts = platItem.split(':');
+          var plat = parts[0];
+          var handle = parts[1] || '';
+          if (plat) {
+            var icon = platformIcons[plat] || '🌐';
+            platformsHtml += `
+              <label style="display:inline-flex;align-items:center;gap:6px;margin-right:15px;cursor:pointer;font-weight:600">
+                <input type="checkbox" class="target-platform-check" value="${u.id}" data-platform="${plat}" style="width:16px;height:16px;accent-color:var(--primary)" checked>
+                <span>${icon} ${plat.toUpperCase()} (${handle})</span>
+              </label>`;
+          }
+        });
+      } else {
+        platformsHtml = `
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
+            <input type="checkbox" class="target-platform-check" value="${u.id}" data-platform="other" style="width:16px;height:16px;accent-color:var(--primary)" checked>
+            <span>🌐 OTHER</span>
+          </label>`;
+      }
+
+      html += `
+        <tr data-inf-row-id="${u.id}">
+          <td style="font-weight:600;padding:12px">${u.name}</td>
+          <td style="padding:12px">${categoryBadges}</td>
+          <td style="padding:12px">${platformsHtml}</td>
+          <td style="text-align:center;padding:12px">
+            <button type="button" class="btn btn-danger btn-sm btn-remove-selected-inf" data-id="${u.id}" style="padding:4px 8px">✕</button>
+          </td>
+        </tr>`;
+    });
+
+    $('#selected-influencers-body').html(html);
   }
 
   function loadTable() {
@@ -186,22 +276,39 @@ App.Admin.Campaigns = (function ($) {
   }
 
   function bindEvents() {
-    $(document).on('change', '.inf-check-card input', function(){
-      var $card = $(this).closest('.inf-check-card');
-      $card.css({ borderColor: this.checked ? 'var(--primary)' : 'var(--border)', background: this.checked ? 'var(--primary-light)' : 'var(--card)' });
+    // Search filter input typing
+    $(document).off('input', '#inf-search').on('input', '#inf-search', function(){
+      filterAndRenderSearch();
     });
 
-    $(document).on('click','#btn-select-all-inf', function(){
-      $('.inf-checkbox').prop('checked', true).trigger('change');
-    });
-    $(document).on('click','#btn-clear-all-inf', function(){
-      $('.inf-checkbox').prop('checked', false).trigger('change');
+    // Category filter select changes
+    $(document).off('change', '#inf-cat-filter').on('change', '#inf-cat-filter', function(){
+      filterAndRenderSearch();
     });
 
-    $(document).on('click','#btn-generate', function(){
+    // Add search result to selected table
+    $(document).off('click', '.btn-add-selected-inf').on('click', '.btn-add-selected-inf', function(){
+      var id = parseInt($(this).data('id'));
+      if (_selectedInfluencers.indexOf(id) === -1) {
+        _selectedInfluencers.push(id);
+        renderSelectedInfluencers();
+        filterAndRenderSearch();
+      }
+    });
+
+    // Remove selected influencer from list
+    $(document).off('click', '.btn-remove-selected-inf').on('click', '.btn-remove-selected-inf', function(){
+      var id = parseInt($(this).data('id'));
+      _selectedInfluencers = _selectedInfluencers.filter(function(item){ return item !== id; });
+      renderSelectedInfluencers();
+      filterAndRenderSearch();
+    });
+
+    // Generate link action
+    $(document).off('click','#btn-generate').on('click','#btn-generate', function(){
       var productId = $('#gen-product').val();
       var targets = [];
-      $('.inf-checkbox:checked').each(function(){
+      $('.target-platform-check:checked').each(function(){
         targets.push({
           influencer_id: $(this).val(),
           platform: $(this).data('platform')
@@ -211,7 +318,7 @@ App.Admin.Campaigns = (function ($) {
       var discVal   = parseFloat($('#gen-discount-value').val()) || 0;
 
       if (!productId) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select a product.',confirmButtonColor:'#6C63FF'}); return; }
-      if (!targets.length) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select at least one influencer platform account.',confirmButtonColor:'#6C63FF'}); return; }
+      if (!targets.length) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select at least one influencer and platform.',confirmButtonColor:'#6C63FF'}); return; }
 
       var $btn = $(this).prop('disabled',true).html('<span class="spinner"></span> Generating...');
 
@@ -240,6 +347,12 @@ App.Admin.Campaigns = (function ($) {
 
           $('#generated-results').show();
           $('#generated-codes-list').html(html);
+          
+          // Clear current selection after generation
+          _selectedInfluencers = [];
+          renderSelectedInfluencers();
+          filterAndRenderSearch();
+          
           Swal.fire({ icon:'success', title:res.message, showConfirmButton:false, timer:2000 });
           loadTable();
         })

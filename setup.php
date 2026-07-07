@@ -51,6 +51,24 @@ CREATE TABLE IF NOT EXISTS `user_platforms` (
 ", "Table: user_platforms", $log, $errors);
 
 run($db, "
+CREATE TABLE IF NOT EXISTS `influencer_categories` (
+  `id`   INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) UNIQUE NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: influencer_categories", $log, $errors);
+
+run($db, "
+CREATE TABLE IF NOT EXISTS `user_categories` (
+  `user_id`     INT NOT NULL,
+  `category_id` INT NOT NULL,
+  PRIMARY KEY (`user_id`, `category_id`),
+  FOREIGN KEY (`user_id`)     REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`category_id`) REFERENCES `influencer_categories`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: user_categories", $log, $errors);
+
+
+run($db, "
 CREATE TABLE IF NOT EXISTS `products` (
   `id`          INT AUTO_INCREMENT PRIMARY KEY,
   `name`        VARCHAR(200) NOT NULL,
@@ -154,19 +172,33 @@ if ($existingAdmin->fetchColumn() == 0) {
     $log[] = "✅ Seeded: Admin user (admin@influx.com / admin@123)";
 }
 
-// Sample influencers
+// Seed influencer categories
+$existingCats = $db->query("SELECT COUNT(*) FROM influencer_categories")->fetchColumn();
+if ($existingCats == 0) {
+    $db->exec("INSERT INTO influencer_categories (name) VALUES 
+        ('Foodies'), 
+        ('Fashion / Dress'), 
+        ('Electronics'), 
+        ('Tech / Software'), 
+        ('Fitness / Lifestyle'), 
+        ('Beauty'),
+        ('Travel')");
+    $log[] = "✅ Seeded: 7 influencer categories";
+}
+
+// Sample influencers and their assigned categories (by name)
 $influencers = [
-    ['Ajit Kumar',       'ajit.kumar@gmail.com',    '+91',  '9876543210',  '@ajitkumar_ig',    'instagram'],
-    ['Sara Mohammed',    'sara.m@gmail.com',         '+973', '33112233',    '@saraofficial',    'tiktok'],
-    ['Ravi Shankar',     'ravi.s@gmail.com',         '+91',  '9012345678',  '@ravishankar_yt',  'youtube'],
-    ['Fatima Al-Zahra',  'fatima.z@gmail.com',       '+966', '501234567',   '@fatimaz.sa',      'instagram'],
-    ['Ahmed Hassan',     'ahmed.h@gmail.com',        '+971', '501234567',   '@ahmedh.uae',      'youtube'],
-    ['Priya Nair',       'priya.n@gmail.com',        '+91',  '8765432100',  '@priyanair_fb',    'facebook'],
-    ['Omar Al-Rashid',   'omar.r@gmail.com',         '+968', '92345678',    '@omarrashid',      'instagram'],
-    ['Layla Hussain',    'layla.h@gmail.com',        '+965', '66123456',    '@laylah_kw',       'tiktok'],
+    ['Ajit Kumar',       'ajit.kumar@gmail.com',    '+91',  '9876543210',  '@ajitkumar_ig',    'instagram', ['Tech / Software', 'Electronics']],
+    ['Sara Mohammed',    'sara.m@gmail.com',         '+973', '33112233',    '@saraofficial',    'tiktok',    ['Fashion / Dress', 'Beauty']],
+    ['Ravi Shankar',     'ravi.s@gmail.com',         '+91',  '9012345678',  '@ravishankar_yt',  'youtube',   ['Foodies', 'Fitness / Lifestyle']],
+    ['Fatima Al-Zahra',  'fatima.z@gmail.com',       '+966', '501234567',   '@fatimaz.sa',      'instagram', ['Beauty', 'Fashion / Dress']],
+    ['Ahmed Hassan',     'ahmed.h@gmail.com',        '+971', '501234567',   '@ahmedh.uae',      'youtube',   ['Tech / Software', 'Electronics']],
+    ['Priya Nair',       'priya.n@gmail.com',        '+91',  '8765432100',  '@priyanair_fb',    'facebook',  ['Fashion / Dress']],
+    ['Omar Al-Rashid',   'omar.r@gmail.com',         '+968', '92345678',    '@omarrashid',      'instagram', ['Travel', 'Foodies']],
+    ['Layla Hussain',    'layla.h@gmail.com',        '+965', '66123456',    '@laylah_kw',       'tiktok',    ['Beauty', 'Fashion / Dress']],
 ];
 $infPass = password_hash('inf@123', PASSWORD_BCRYPT);
-foreach ($influencers as [$name, $email, $cc, $phone, $handle, $platform]) {
+foreach ($influencers as [$name, $email, $cc, $phone, $handle, $platform, $cats]) {
     $chk = $db->prepare("SELECT id FROM users WHERE email=?");
     $chk->execute([$email]);
     $user = $chk->fetch();
@@ -196,6 +228,19 @@ foreach ($influencers as [$name, $email, $cc, $phone, $handle, $platform]) {
         } elseif ($platform === 'youtube') {
             $insPlat->execute([$userId, 'instagram', '@' . strtolower(str_replace(' ', '', $name)) . '_ig']);
             $insPlat->execute([$userId, 'tiktok', '@' . strtolower(str_replace(' ', '', $name)) . '_tiktok']);
+        }
+    }
+
+    // Map influencer to categories
+    $catChk = $db->prepare("SELECT COUNT(*) FROM user_categories WHERE user_id=?");
+    $catChk->execute([$userId]);
+    if ($catChk->fetchColumn() == 0) {
+        $insCat = $db->prepare("
+            INSERT INTO user_categories (user_id, category_id) 
+            SELECT ?, id FROM influencer_categories WHERE name = ?
+        ");
+        foreach ($cats as $catName) {
+            $insCat->execute([$userId, $catName]);
         }
     }
 }

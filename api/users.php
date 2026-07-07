@@ -14,9 +14,12 @@ if ($action === 'list') {
                u.status, u.created_at,
                COUNT(DISTINCT c.id) as total_campaigns,
                COUNT(DISTINCT e.id) as total_conversions,
-               GROUP_CONCAT(CONCAT(up.platform, ':', IFNULL(up.social_handle, '')) SEPARATOR ',') as platforms_list
+               GROUP_CONCAT(DISTINCT CONCAT(up.platform, ':', IFNULL(up.social_handle, '')) SEPARATOR ',') as platforms_list,
+               GROUP_CONCAT(DISTINCT ic.name SEPARATOR ',') as categories_list
         FROM users u
         LEFT JOIN user_platforms up ON up.user_id = u.id
+        LEFT JOIN user_categories uc ON uc.user_id = u.id
+        LEFT JOIN influencer_categories ic ON ic.id = uc.category_id
         LEFT JOIN campaigns c ON c.influencer_id = u.id
         LEFT JOIN events e    ON e.campaign_id   = c.id AND e.type = 'conversion'
         WHERE u.role = 'influencer'
@@ -39,6 +42,11 @@ if ($action === 'get') {
     $platStmt->execute([$id]);
     $user['platforms'] = $platStmt->fetchAll();
 
+    // Get categories list
+    $catStmt = $db->prepare("SELECT category_id FROM user_categories WHERE user_id = ?");
+    $catStmt->execute([$id]);
+    $user['categories'] = array_column($catStmt->fetchAll(), 'category_id');
+
     apiSuccess($user);
 }
 
@@ -51,6 +59,7 @@ if ($action === 'create') {
     $cc     = sanitize($input['country_code'] ?? '+973');
     $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
     $plats  = $input['platforms']       ?? [];
+    $cats   = $input['categories']      ?? [];
 
     if (!$name)  apiError('Name is required.');
     if (!$email) apiError('Email is required.');
@@ -82,6 +91,14 @@ if ($action === 'create') {
         }
     }
 
+    // Insert all categories
+    if (!empty($cats)) {
+        $insCat = $db->prepare("INSERT INTO user_categories (user_id, category_id) VALUES (?, ?)");
+        foreach ($cats as $catId) {
+            $insCat->execute([$newId, (int)$catId]);
+        }
+    }
+
     $get = $db->prepare("SELECT id,name,email,phone,country_code,status,created_at FROM users WHERE id=?");
     $get->execute([$newId]);
     $user = $get->fetch();
@@ -97,6 +114,7 @@ if ($action === 'update') {
     $cc     = sanitize($input['country_code'] ?? '+973');
     $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
     $plats  = $input['platforms']       ?? [];
+    $cats   = $input['categories']      ?? [];
 
     if (!$id)    apiError('ID is required.');
     if (!$name)  apiError('Name is required.');
@@ -134,6 +152,15 @@ if ($action === 'update') {
         }
     }
 
+    // Refresh categories
+    $db->prepare("DELETE FROM user_categories WHERE user_id = ?")->execute([$id]);
+    if (!empty($cats)) {
+        $insCat = $db->prepare("INSERT INTO user_categories (user_id, category_id) VALUES (?, ?)");
+        foreach ($cats as $catId) {
+            $insCat->execute([$id, (int)$catId]);
+        }
+    }
+
     $get = $db->prepare("SELECT id,name,email,phone,country_code,status,created_at FROM users WHERE id=?");
     $get->execute([$id]);
     $user = $get->fetch();
@@ -158,6 +185,12 @@ if ($action === 'delete') {
     $stmt = $db->prepare("DELETE FROM users WHERE id=? AND role='influencer'");
     $stmt->execute([$id]);
     apiSuccess([], 'Influencer deleted');
+}
+
+// ─── List Categories ──────────────────────────
+if ($action === 'categories') {
+    $stmt = $db->query("SELECT id, name FROM influencer_categories ORDER BY name ASC");
+    apiSuccess($stmt->fetchAll());
 }
 
 apiError('Invalid action');
