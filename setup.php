@@ -172,30 +172,57 @@ if ($existingAdmin->fetchColumn() == 0) {
     $log[] = "✅ Seeded: Admin user (admin@influx.com / admin@123)";
 }
 
-// Seed influencer categories
+// Seed influencer categories with emojis
 $existingCats = $db->query("SELECT COUNT(*) FROM influencer_categories")->fetchColumn();
 if ($existingCats == 0) {
     $db->exec("INSERT INTO influencer_categories (name) VALUES 
-        ('Foodies'), 
-        ('Fashion / Dress'), 
-        ('Electronics'), 
-        ('Tech / Software'), 
-        ('Fitness / Lifestyle'), 
-        ('Beauty'),
-        ('Travel')");
-    $log[] = "✅ Seeded: 7 influencer categories";
+        ('🍔 Foodies'), 
+        ('👗 Fashion / Dress'), 
+        ('🔌 Electronics'), 
+        ('💻 Tech / Software'), 
+        ('🏋️ Fitness / Lifestyle'), 
+        ('💄 Beauty'),
+        ('✈️ Travel'),
+        ('⚽ Sports'),
+        ('🎮 Gaming'),
+        ('🎵 Music / Art')");
+    $log[] = "✅ Seeded: 10 influencer categories with emojis";
+} else {
+    // Migration: Update existing categories to add emojis
+    $catMapping = [
+        'Foodies'             => '🍔 Foodies',
+        'Fashion / Dress'     => '👗 Fashion / Dress',
+        'Electronics'         => '🔌 Electronics',
+        'Tech / Software'     => '💻 Tech / Software',
+        'Fitness / Lifestyle' => '🏋️ Fitness / Lifestyle',
+        'Beauty'              => '💄 Beauty',
+        'Travel'              => '✈️ Travel',
+    ];
+    foreach ($catMapping as $oldName => $newName) {
+        $db->prepare("UPDATE influencer_categories SET name = ? WHERE name = ?")->execute([$newName, $oldName]);
+    }
+
+    // Add new categories with emojis if they don't exist
+    $newCats = ['⚽ Sports', '🎮 Gaming', '🎵 Music / Art'];
+    foreach ($newCats as $name) {
+        $chk = $db->prepare("SELECT COUNT(*) FROM influencer_categories WHERE name = ?");
+        $chk->execute([$name]);
+        if ($chk->fetchColumn() == 0) {
+            $db->prepare("INSERT INTO influencer_categories (name) VALUES (?)")->execute([$name]);
+        }
+    }
 }
 
 // Sample influencers and their assigned categories (by name)
 $influencers = [
-    ['Ajit Kumar',       'ajit.kumar@gmail.com',    '+91',  '9876543210',  '@ajitkumar_ig',    'instagram', ['Tech / Software', 'Electronics']],
-    ['Sara Mohammed',    'sara.m@gmail.com',         '+973', '33112233',    '@saraofficial',    'tiktok',    ['Fashion / Dress', 'Beauty']],
-    ['Ravi Shankar',     'ravi.s@gmail.com',         '+91',  '9012345678',  '@ravishankar_yt',  'youtube',   ['Foodies', 'Fitness / Lifestyle']],
-    ['Fatima Al-Zahra',  'fatima.z@gmail.com',       '+966', '501234567',   '@fatimaz.sa',      'instagram', ['Beauty', 'Fashion / Dress']],
-    ['Ahmed Hassan',     'ahmed.h@gmail.com',        '+971', '501234567',   '@ahmedh.uae',      'youtube',   ['Tech / Software', 'Electronics']],
-    ['Priya Nair',       'priya.n@gmail.com',        '+91',  '8765432100',  '@priyanair_fb',    'facebook',  ['Fashion / Dress']],
-    ['Omar Al-Rashid',   'omar.r@gmail.com',         '+968', '92345678',    '@omarrashid',      'instagram', ['Travel', 'Foodies']],
-    ['Layla Hussain',    'layla.h@gmail.com',        '+965', '66123456',    '@laylah_kw',       'tiktok',    ['Beauty', 'Fashion / Dress']],
+    ['Ajit Kumar',       'ajit.kumar@gmail.com',    '+91',  '9876543210',  '@ajitkumar_ig',    'instagram', ['💻 Tech / Software', '🔌 Electronics']],
+    ['Sara Mohammed',    'sara.m@gmail.com',         '+973', '33112233',    '@saraofficial',    'tiktok',    ['👗 Fashion / Dress', '💄 Beauty']],
+    ['Ravi Shankar',     'ravi.s@gmail.com',         '+91',  '9012345678',  '@ravishankar_yt',  'youtube',   ['🍔 Foodies', '🏋️ Fitness / Lifestyle']],
+    ['Fatima Al-Zahra',  'fatima.z@gmail.com',       '+966', '501234567',   '@fatimaz.sa',      'instagram', ['💄 Beauty', '👗 Fashion / Dress']],
+    ['Ahmed Hassan',     'ahmed.h@gmail.com',        '+971', '501234567',   '@ahmedh.uae',      'youtube',   ['💻 Tech / Software', '🔌 Electronics']],
+    ['Priya Nair',       'priya.n@gmail.com',        '+91',  '8765432100',  '@priyanair_fb',    'facebook',  ['👗 Fashion / Dress']],
+    ['Omar Al-Rashid',   'omar.r@gmail.com',         '+968', '92345678',    '@omarrashid',      'instagram', ['✈️ Travel', '🍔 Foodies']],
+    ['Layla Hussain',    'layla.h@gmail.com',        '+965', '66123456',    '@laylah_kw',       'tiktok',    ['💄 Beauty', '👗 Fashion / Dress']],
 ];
 $infPass = password_hash('inf@123', PASSWORD_BCRYPT);
 foreach ($influencers as [$name, $email, $cc, $phone, $handle, $platform, $cats]) {
