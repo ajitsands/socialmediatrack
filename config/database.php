@@ -3,11 +3,17 @@
 //  Database Configuration
 //  socialmedia_track  |  localhost  |  root
 // ─────────────────────────────────────────────
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'socialmedia_track');
-define('DB_USER', 'root');
-define('DB_PASS', 'S@nds1@b');
-define('DB_CHARSET', 'utf8mb4');
+$localConfig = __DIR__ . '/local.php';
+if (file_exists($localConfig)) {
+    require_once $localConfig;
+}
+
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', 'socialmedia_track');
+if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_PASS')) define('DB_PASS', 'S@nds1@b');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+
 
 function getDB(): PDO {
     static $pdo = null;

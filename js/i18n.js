@@ -141,7 +141,7 @@ App.i18n = (function () {
 
       /* ── Landing Page ────────────────── */
       landing_title:       'Exclusive Offer Just For You!',
-      landing_subtitle:    'You've been invited by an exclusive partner',
+      landing_subtitle:    'You\'ve been invited by an exclusive partner',
       your_name:           'Your Full Name',
       your_phone:          'Your Phone Number',
       promo_code:          'Promo Code',
