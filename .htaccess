@@ -1,0 +1,58 @@
+Options -Indexes
+ServerSignature Off
+
+# ─── PHP Settings ────────────────────────────
+php_flag display_errors Off
+php_flag log_errors On
+
+# ─── Security Headers ────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ─── Protect config directory ────────────────
+<DirectoryMatch "^/.*(config).*$">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# ─── Protect log files ───────────────────────
+<FilesMatch "\.(log|txt|sql|sh|env)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+# Allow webhook_log to be blocked too
+<Files "webhook_log.txt">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ─── Rewrite rules ───────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Allow direct access to existing files/dirs
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Route /track/{ref} to landing.php?ref={ref}
+    RewriteRule ^track/([a-zA-Z0-9_\-]+)$ landing.php?ref=$1 [QSA,L]
+
+    # All other requests → index.php
+    RewriteRule ^(?!api/|css/|js/|assets/|webhook\.php|landing\.php|setup\.php)(.*)$ index.php [QSA,L]
+</IfModule>
+
+# ─── Cache static assets ─────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+</IfModule>

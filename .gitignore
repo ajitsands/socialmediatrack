@@ -1,0 +1,22 @@
+# Environment & config secrets
+config/local.php
+
+# Logs
+*.log
+webhook_log.txt
+error_log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# PHP
+vendor/
+composer.lock
+
+# Uploads
+uploads/
