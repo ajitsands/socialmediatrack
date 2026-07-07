@@ -142,25 +142,25 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- App modules -->
-<script src="js/i18n.js"></script>
-<script src="js/countries.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/api.js"></script>
+<script src="js/i18n.js?v=1.0.2"></script>
+<script src="js/countries.js?v=1.0.2"></script>
+<script src="js/auth.js?v=1.0.2"></script>
+<script src="js/api.js?v=1.0.2"></script>
 
 <!-- Admin modules -->
-<script src="js/admin/dashboard.js"></script>
-<script src="js/admin/influencers.js"></script>
-<script src="js/admin/products.js"></script>
-<script src="js/admin/campaigns.js"></script>
-<script src="js/admin/analytics.js"></script>
-<script src="js/admin/points.js"></script>
-<script src="js/admin/wallet.js"></script>
+<script src="js/admin/dashboard.js?v=1.0.2"></script>
+<script src="js/admin/influencers.js?v=1.0.2"></script>
+<script src="js/admin/products.js?v=1.0.2"></script>
+<script src="js/admin/campaigns.js?v=1.0.2"></script>
+<script src="js/admin/analytics.js?v=1.0.2"></script>
+<script src="js/admin/points.js?v=1.0.2"></script>
+<script src="js/admin/wallet.js?v=1.0.2"></script>
 
 <!-- Influencer modules -->
-<script src="js/influencer/dashboard.js"></script>
+<script src="js/influencer/dashboard.js?v=1.0.2"></script>
 
 <!-- Router (boot last) -->
-<script src="js/app.js"></script>
+<script src="js/app.js?v=1.0.2"></script>
 
 </body>
 </html>
