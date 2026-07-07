@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS `users` (
 ", "Table: users", $log, $errors);
 
 run($db, "
+CREATE TABLE IF NOT EXISTS `user_platforms` (
+  `id`            INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id`       INT NOT NULL,
+  `platform`      VARCHAR(50) NOT NULL,
+  `social_handle` VARCHAR(100),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: user_platforms", $log, $errors);
+
+run($db, "
 CREATE TABLE IF NOT EXISTS `products` (
   `id`          INT AUTO_INCREMENT PRIMARY KEY,
   `name`        VARCHAR(200) NOT NULL,
@@ -66,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `campaigns` (
   `ref_token`       TEXT NOT NULL,
   `discount_type`   ENUM('percent','fixed') DEFAULT 'percent',
   `discount_value`  DECIMAL(10,2) DEFAULT 0,
+  `platform`        VARCHAR(50)  DEFAULT NULL,
   `status`          ENUM('active','paused','expired') DEFAULT 'active',
   `created_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -73,6 +84,14 @@ CREATE TABLE IF NOT EXISTS `campaigns` (
   FOREIGN KEY (`influencer_id`) REFERENCES `users`(`id`)    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: campaigns", $log, $errors);
+
+// Run migration for existing campaigns table if it was already created without platform
+try {
+    $cols = $db->query("DESCRIBE `campaigns`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('platform', $cols)) {
+        run($db, "ALTER TABLE `campaigns` ADD COLUMN `platform` VARCHAR(50) DEFAULT NULL AFTER `discount_value`", "Migration: Add platform column to campaigns table", $log, $errors);
+    }
+} catch (Exception $e) {}
 
 run($db, "
 CREATE TABLE IF NOT EXISTS `events` (
@@ -117,6 +136,7 @@ CREATE TABLE IF NOT EXISTS `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: wallet_transactions", $log, $errors);
 
+
 // ─── Seed Data ────────────────────────────────
 // Points config
 $existing = $db->query("SELECT COUNT(*) FROM points_config")->fetchColumn();
@@ -147,14 +167,40 @@ $influencers = [
 ];
 $infPass = password_hash('inf@123', PASSWORD_BCRYPT);
 foreach ($influencers as [$name, $email, $cc, $phone, $handle, $platform]) {
-    $chk = $db->prepare("SELECT COUNT(*) FROM users WHERE email=?");
+    $chk = $db->prepare("SELECT id FROM users WHERE email=?");
     $chk->execute([$email]);
-    if ($chk->fetchColumn() == 0) {
+    $user = $chk->fetch();
+    
+    if (!$user) {
         $s = $db->prepare("INSERT INTO users (name,email,password,role,phone,country_code,social_handle,platform,status) VALUES (?,?,?,'influencer',?,?,?,?,'active')");
         $s->execute([$name, $email, $infPass, $phone, $cc, $handle, $platform]);
+        $userId = $db->lastInsertId();
+    } else {
+        $userId = $user['id'];
+    }
+
+    // Seed multiple platforms for each influencer
+    $platChk = $db->prepare("SELECT COUNT(*) FROM user_platforms WHERE user_id=?");
+    $platChk->execute([$userId]);
+    if ($platChk->fetchColumn() == 0) {
+        $insPlat = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle) VALUES (?, ?, ?)");
+        // Add the primary platform
+        $insPlat->execute([$userId, $platform, $handle]);
+        
+        // Add additional sample platforms
+        if ($platform === 'instagram') {
+            $insPlat->execute([$userId, 'tiktok', '@' . strtolower(str_replace(' ', '', $name)) . '_tiktok']);
+            $insPlat->execute([$userId, 'youtube', str_replace(' ', '', $name) . ' Channel']);
+        } elseif ($platform === 'tiktok') {
+            $insPlat->execute([$userId, 'instagram', '@' . strtolower(str_replace(' ', '', $name)) . '_ig']);
+        } elseif ($platform === 'youtube') {
+            $insPlat->execute([$userId, 'instagram', '@' . strtolower(str_replace(' ', '', $name)) . '_ig']);
+            $insPlat->execute([$userId, 'tiktok', '@' . strtolower(str_replace(' ', '', $name)) . '_tiktok']);
+        }
     }
 }
-$log[] = "✅ Seeded: 8 influencer accounts (password: inf@123)";
+$log[] = "✅ Seeded: 8 influencer accounts and their multiple social media platforms (password: inf@123)";
+
 
 // Sample products
 $products = [

@@ -17,7 +17,8 @@ if ($action === 'list') {
         SELECT c.*,
                p.name as product_name, p.category as product_category,
                p.price, p.currency, p.product_url, p.image_url,
-               u.name as influencer_name, u.social_handle, u.platform,
+               u.name as influencer_name, u.social_handle,
+               IFNULL(c.platform, u.platform) as platform,
                COUNT(DISTINCT e.id) as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions,
                COUNT(DISTINCT CASE WHEN e.type='skip' THEN e.id END) as total_skips
@@ -55,12 +56,19 @@ if ($action === 'get') {
 if ($action === 'generate') {
     requireAdmin();
     $productId      = (int)($input['product_id']      ?? 0);
-    $influencerIds  = $input['influencer_ids']         ?? [];
     $discountType   = in_array($input['discount_type'] ?? 'percent', ['percent','fixed']) ? $input['discount_type'] : 'percent';
     $discountValue  = (float)($input['discount_value'] ?? 0);
+    $targets        = $input['targets']                ?? [];
+
+    // Fallback support for older parameters (array of IDs)
+    if (empty($targets) && !empty($input['influencer_ids'])) {
+        foreach ($input['influencer_ids'] as $infId) {
+            $targets[] = ['influencer_id' => $infId, 'platform' => ''];
+        }
+    }
 
     if (!$productId)         apiError('Product is required.');
-    if (empty($influencerIds)) apiError('Select at least one influencer.');
+    if (empty($targets))     apiError('Select at least one influencer target.');
 
     // Get product
     $pStmt = $db->prepare("SELECT id,name FROM products WHERE id=? AND status='active'");
@@ -74,18 +82,29 @@ if ($action === 'generate') {
     $pIndex   = (array_search($productId, $pAll) ?: 0) + 1;
 
     $created = [];
-    foreach ($influencerIds as $infId) {
-        $infId = (int)$infId;
+    foreach ($targets as $target) {
+        $infId = (int)($target['influencer_id'] ?? 0);
+        $plat  = sanitize($target['platform']     ?? '');
+
         // Get influencer
-        $uStmt = $db->prepare("SELECT id,name FROM users WHERE id=? AND role='influencer' AND status='active'");
+        $uStmt = $db->prepare("SELECT id,name,platform FROM users WHERE id=? AND role='influencer' AND status='active'");
         $uStmt->execute([$infId]);
         $inf = $uStmt->fetch();
         if (!$inf) continue;
 
-        // Check if campaign already exists for this influencer+product
-        $existStmt = $db->prepare("SELECT id FROM campaigns WHERE product_id=? AND influencer_id=? AND status='active' LIMIT 1");
-        $existStmt->execute([$productId, $infId]);
-        if ($existStmt->fetch()) continue; // Skip if already has active campaign
+        // Default to user's main platform if not specified
+        if (!$plat) {
+            $plat = $inf['platform'] ?: 'instagram';
+        }
+
+        // Check if campaign already exists for this influencer+product+platform
+        $existStmt = $db->prepare("
+            SELECT id FROM campaigns 
+            WHERE product_id=? AND influencer_id=? AND platform=? AND status='active' 
+            LIMIT 1
+        ");
+        $existStmt->execute([$productId, $infId, $plat]);
+        if ($existStmt->fetch()) continue; // Skip if already has active campaign for this platform
 
         // Generate unique offer code
         $attempts = 0;
@@ -102,13 +121,14 @@ if ($action === 'generate') {
             'influencer_id' => $infId,
             'product_id'    => $productId,
             'offer_code'    => $code,
+            'platform'      => $plat,
             'ts'            => time(),
         ];
         // Temporary token (will regenerate with real campaign_id)
         $tmpToken = encryptToken($tokenData);
 
-        $stmt = $db->prepare("INSERT INTO campaigns (product_id,influencer_id,offer_code,ref_token,discount_type,discount_value,status) VALUES (?,?,?,?,?,?,'active')");
-        $stmt->execute([$productId,$infId,$code,$tmpToken,$discountType,$discountValue]);
+        $stmt = $db->prepare("INSERT INTO campaigns (product_id,influencer_id,offer_code,ref_token,discount_type,discount_value,platform,status) VALUES (?,?,?,?,?,?,?, 'active')");
+        $stmt->execute([$productId,$infId,$code,$tmpToken,$discountType,$discountValue,$plat]);
         $campId = (int)$db->lastInsertId();
 
         // Regenerate token with real campaign_id and update
@@ -123,13 +143,14 @@ if ($action === 'generate') {
             'product_name'   => $product['name'],
             'offer_code'     => $code,
             'ref_token'      => $finalToken,
+            'platform'       => $plat,
             'landing_url'    => LANDING_URL . '?ref=' . $finalToken,
             'discount_type'  => $discountType,
             'discount_value' => $discountValue,
         ];
     }
 
-    if (empty($created)) apiError('No new campaigns created. Campaigns may already exist for selected influencers.');
+    if (empty($created)) apiError('No new campaigns created. Campaigns may already exist for selected influencer platforms.');
     apiSuccess($created, count($created) . ' campaign(s) generated successfully');
 }
 

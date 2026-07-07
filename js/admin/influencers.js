@@ -85,21 +85,13 @@ App.Admin.Influencers = (function ($) {
                     </div>
                   </div>
                 </div>
-                <div class="grid-2">
-                  <div class="form-group">
-                    <label class="form-label">${t('platform')}</label>
-                    <select class="form-control" id="inf-platform">
-                      <option value="instagram">📸 Instagram</option>
-                      <option value="tiktok">🎵 TikTok</option>
-                      <option value="youtube">▶️ YouTube</option>
-                      <option value="facebook">👍 Facebook</option>
-                      <option value="twitter">🐦 Twitter / X</option>
-                      <option value="other">🌐 Other</option>
-                    </select>
+                <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;margin-bottom:16px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <label class="form-label" style="margin-bottom:0;font-weight:700">📱 Social Media Accounts</label>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-add-platform-row">➕ Add Account</button>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">${t('social_handle')}</label>
-                    <input type="text" class="form-control" id="inf-handle" placeholder="@username">
+                  <div id="platform-rows-container" style="display:flex;flex-direction:column;gap:10px">
+                    <!-- Dynamic platform rows go here -->
                   </div>
                 </div>
                 <div class="form-group">
@@ -137,17 +129,36 @@ App.Admin.Influencers = (function ($) {
             { data: null, render: function(d,t,r,m){ return m.row + 1; }, orderable: false, width: '40px' },
             { data: 'name', render: function(d,t,r){
                 var initials = r.name.split(' ').map(function(p){return p[0];}).join('').substring(0,2).toUpperCase();
+                
+                // Extract first platform's handle as subtitle
+                var subtitle = '';
+                if (r.platforms_list) {
+                  var firstPlat = r.platforms_list.split(',')[0];
+                  if (firstPlat) subtitle = firstPlat.split(':')[1] || '';
+                }
+
                 return `<div style="display:flex;align-items:center;gap:10px">
                   <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6584);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.75rem;flex-shrink:0">${initials}</div>
-                  <div><div style="font-weight:600">${r.name}</div><div style="font-size:0.75rem;color:var(--text-muted)">${r.social_handle||''}</div></div>
+                  <div><div style="font-weight:600">${r.name}</div><div style="font-size:0.75rem;color:var(--text-muted)">${subtitle}</div></div>
                 </div>`;
               }
             },
             { data: 'email' },
             { data: 'phone', render: function(d,t,r){ return (r.country_code||'')+' '+(d||'—'); }},
-            { data: 'platform', render: function(d){
-                var icon = platformIcons[d] || '🌐';
-                return `<span class="badge platform-${d}">${icon} ${d}</span>`;
+            { data: 'platforms_list', render: function(d){
+                if (!d) return '<span class="badge badge-muted">None</span>';
+                var html = '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+                d.split(',').forEach(function(platItem){
+                  var parts = platItem.split(':');
+                  var plat = parts[0];
+                  var handle = parts[1] || '';
+                  if (plat) {
+                    var icon = platformIcons[plat] || '🌐';
+                    html += `<span class="badge platform-${plat}" title="${handle}" style="font-size:0.75rem;padding:2px 8px">${icon} ${plat}</span>`;
+                  }
+                });
+                html += '</div>';
+                return html;
               }
             },
             { data: 'total_campaigns', render: function(d){ return '<strong>'+d+'</strong>'; }},
@@ -170,20 +181,51 @@ App.Admin.Influencers = (function ($) {
       .fail(App.api.handleError);
   }
 
+  function addPlatformRow(plat, handle) {
+    plat = plat || 'instagram';
+    handle = handle || '';
+    var rowHtml = `
+      <div class="platform-row" style="display:flex;gap:10px;align-items:center">
+        <select class="form-control row-platform" style="flex:1">
+          <option value="instagram" ${plat === 'instagram' ? 'selected' : ''}>📸 Instagram</option>
+          <option value="tiktok" ${plat === 'tiktok' ? 'selected' : ''}>🎵 TikTok</option>
+          <option value="youtube" ${plat === 'youtube' ? 'selected' : ''}>▶️ YouTube</option>
+          <option value="facebook" ${plat === 'facebook' ? 'selected' : ''}>👍 Facebook</option>
+          <option value="twitter" ${plat === 'twitter' ? 'selected' : ''}>🐦 Twitter / X</option>
+          <option value="other" ${plat === 'other' ? 'selected' : ''}>🌐 Other</option>
+        </select>
+        <input type="text" class="form-control row-handle" style="flex:1" placeholder="@username" value="${handle}">
+        <button type="button" class="btn btn-danger btn-sm btn-remove-platform-row" style="padding:6px 10px">✕</button>
+      </div>`;
+    $('#platform-rows-container').append(rowHtml);
+  }
+
   function bindEvents() {
+    // Add platform row button
+    $(document).off('click', '#btn-add-platform-row').on('click', '#btn-add-platform-row', function(){
+      addPlatformRow();
+    });
+
+    // Remove platform row button
+    $(document).off('click', '.btn-remove-platform-row').on('click', '.btn-remove-platform-row', function(){
+      $(this).closest('.platform-row').remove();
+    });
+
     // Open add modal
-    $(document).on('click', '#btn-add-influencer', function(){
+    $(document).off('click', '#btn-add-influencer').on('click', '#btn-add-influencer', function(){
       _editId = null;
       $('#modal-inf-title').text(App.i18n.t('add_influencer'));
       $('#form-influencer')[0].reset();
       $('#inf-id').val('');
+      $('#platform-rows-container').empty();
+      addPlatformRow(); // Add one initial blank platform row
       $('#pass-req').show(); $('#pass-hint').hide();
       App.countries.renderSelect('inf-country-code', '+973');
       $('#modal-influencer').show();
     });
 
     // Edit
-    $(document).on('click', '.btn-edit-inf', function(){
+    $(document).off('click', '.btn-edit-inf').on('click', '.btn-edit-inf', function(){
       var id = $(this).data('id');
       _editId = id;
       App.api.users.get(id).done(function(res){
@@ -194,21 +236,40 @@ App.Admin.Influencers = (function ($) {
         $('#inf-name').val(r.name);
         $('#inf-email').val(r.email);
         $('#inf-phone').val(r.phone);
-        $('#inf-platform').val(r.platform);
-        $('#inf-handle').val(r.social_handle);
         $('#inf-status').val(r.status);
         $('#inf-password').val('');
         $('#pass-req').hide(); $('#pass-hint').show();
         App.countries.renderSelect('inf-country-code', r.country_code || '+973');
+
+        // Populate platforms
+        $('#platform-rows-container').empty();
+        if (r.platforms && r.platforms.length > 0) {
+          r.platforms.forEach(function(plat){
+            addPlatformRow(plat.platform, plat.handle);
+          });
+        } else {
+          addPlatformRow();
+        }
+
         $('#modal-influencer').show();
       }).fail(App.api.handleError);
     });
 
     // Close modal
-    $(document).on('click', '#btn-close-modal-inf, #btn-cancel-inf', function(){ $('#modal-influencer').hide(); });
+    $(document).off('click', '#btn-close-modal-inf, #btn-cancel-inf').on('click', '#btn-close-modal-inf, #btn-cancel-inf', function(){ $('#modal-influencer').hide(); });
 
     // Save
-    $(document).on('click', '#btn-save-inf', function(){
+    $(document).off('click', '#btn-save-inf').on('click', '#btn-save-inf', function(){
+      // Collect platforms
+      var platformsList = [];
+      $('.platform-row').each(function(){
+        var pName = $(this).find('.row-platform').val();
+        var pHand = $(this).find('.row-handle').val().trim();
+        if (pName) {
+          platformsList.push({ platform: pName, handle: pHand });
+        }
+      });
+
       var data = {
         id:           $('#inf-id').val() || null,
         name:         $('#inf-name').val(),
@@ -216,10 +277,10 @@ App.Admin.Influencers = (function ($) {
         password:     $('#inf-password').val(),
         phone:        $('#inf-phone').val(),
         country_code: $('#inf-country-code').val(),
-        platform:     $('#inf-platform').val(),
-        social_handle:$('#inf-handle').val(),
         status:       $('#inf-status').val(),
+        platforms:    platformsList
       };
+
       var action = data.id ? App.api.users.update(data) : App.api.users.create(data);
       var $btn = $(this).prop('disabled', true).html('<span class="spinner"></span>');
       action
@@ -233,7 +294,7 @@ App.Admin.Influencers = (function ($) {
     });
 
     // Delete
-    $(document).on('click', '.btn-del-inf', function(){
+    $(document).off('click', '.btn-del-inf').on('click', '.btn-del-inf', function(){
       var id = $(this).data('id');
       Swal.fire({
         icon: 'warning', title: App.i18n.t('delete_influencer'),
@@ -252,7 +313,7 @@ App.Admin.Influencers = (function ($) {
     });
 
     // Toggle status
-    $(document).on('click', '[data-toggle-id]', function(){
+    $(document).off('click', '[data-toggle-id]').on('click', '[data-toggle-id]', function(){
       var id = $(this).data('toggle-id');
       App.api.users.toggleStatus(id).done(function(res){
         loadTable();

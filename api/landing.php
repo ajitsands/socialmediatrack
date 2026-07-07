@@ -37,7 +37,7 @@ if ($action === 'info') {
                p.name as product_name, p.description as product_desc,
                p.price, p.currency, p.image_url, p.product_url, p.demo_url,
                p.category,
-               u.name as influencer_name, u.social_handle, u.platform
+               u.name as influencer_name, u.social_handle, IFNULL(c.platform, u.platform) as platform
         FROM campaigns c
         JOIN products p ON p.id = c.product_id
         JOIN users    u ON u.id = c.influencer_id

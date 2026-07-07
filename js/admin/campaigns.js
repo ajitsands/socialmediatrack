@@ -108,16 +108,36 @@ App.Admin.Campaigns = (function ($) {
 
   function loadInfluencers() {
     App.api.users.list().done(function(res){
-      var html = res.data.filter(function(u){ return u.status==='active'; }).map(function(u){
-        return `
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all 0.2s;background:var(--card)" class="inf-check-card">
-            <input type="checkbox" class="inf-checkbox" value="${u.id}" style="width:16px;height:16px;accent-color:var(--primary)">
-            <div>
-              <div style="font-weight:600;font-size:0.88rem">${u.name}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted)">${u.social_handle||''} • ${u.platform}</div>
-            </div>
-          </label>`;
-      }).join('');
+      var html = '';
+      res.data.filter(function(u){ return u.status==='active'; }).forEach(function(u){
+        if (u.platforms_list) {
+          u.platforms_list.split(',').forEach(function(platItem){
+            var parts = platItem.split(':');
+            var platName = parts[0];
+            var handle = parts[1] || '';
+            if (platName) {
+              var icon = platformIcons[platName] || '🌐';
+              html += `
+                <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all 0.2s;background:var(--card)" class="inf-check-card">
+                  <input type="checkbox" class="inf-checkbox" value="${u.id}" data-platform="${platName}" style="width:16px;height:16px;accent-color:var(--primary)">
+                  <div>
+                    <div style="font-weight:600;font-size:0.88rem">${u.name}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted)">${icon} ${platName.toUpperCase()} • ${handle}</div>
+                  </div>
+                </label>`;
+            }
+          });
+        } else {
+          html += `
+            <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all 0.2s;background:var(--card)" class="inf-check-card">
+              <input type="checkbox" class="inf-checkbox" value="${u.id}" data-platform="other" style="width:16px;height:16px;accent-color:var(--primary)">
+              <div>
+                <div style="font-weight:600;font-size:0.88rem">${u.name}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">🌐 Other</div>
+              </div>
+            </label>`;
+        }
+      });
       $('#influencer-checkboxes').html(html || '<p style="color:var(--text-muted);padding:12px">No active influencers found</p>');
     });
   }
@@ -131,7 +151,7 @@ App.Admin.Campaigns = (function ($) {
         order: [[0,'desc']],
         columns: [
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false, width:'40px' },
-          { data: 'influencer_name', render: function(d,t,r){ return `<strong>${d}</strong><br><small style="color:var(--text-muted)">${r.social_handle||''}</small>`; }},
+          { data: 'influencer_name', render: function(d,t,r){ return `<strong>${d}</strong>`; }},
           { data: 'product_name', render: function(d,t,r){ return `<strong>${d}</strong><br><small class="badge badge-muted">${r.product_category||''}</small>`; }},
           { data: 'offer_code', render: function(d){ return `<code style="background:var(--badge-bg);padding:4px 8px;border-radius:6px;font-size:0.85rem;font-weight:700;color:var(--primary)">${d}</code>`; }},
           { data: 'total_clicks', render: function(d){ return '<span style="color:var(--info);font-weight:700">'+d+'</span>'; }},
@@ -139,6 +159,11 @@ App.Admin.Campaigns = (function ($) {
           { data: 'discount_value', render: function(d,t,r){
               if (!d || d==0) return '<span class="badge badge-muted">None</span>';
               return `<span class="badge badge-accent">${r.discount_type==='percent'?d+'%':'BHD '+d}</span>`;
+            }
+          },
+          { data: 'platform', render: function(d){
+              var icon = platformIcons[d] || '🌐';
+              return `<span class="badge platform-${d}">${icon} ${d}</span>`;
             }
           },
           { data: 'status', render: function(d){
@@ -174,24 +199,32 @@ App.Admin.Campaigns = (function ($) {
 
     $(document).on('click','#btn-generate', function(){
       var productId = $('#gen-product').val();
-      var infIds    = $('.inf-checkbox:checked').map(function(){ return $(this).val(); }).get();
+      var targets = [];
+      $('.inf-checkbox:checked').each(function(){
+        targets.push({
+          influencer_id: $(this).val(),
+          platform: $(this).data('platform')
+        });
+      });
       var discType  = $('#gen-discount-type').val();
       var discVal   = parseFloat($('#gen-discount-value').val()) || 0;
 
       if (!productId) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select a product.',confirmButtonColor:'#6C63FF'}); return; }
-      if (!infIds.length) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select at least one influencer.',confirmButtonColor:'#6C63FF'}); return; }
+      if (!targets.length) { Swal.fire({icon:'warning',title:App.i18n.t('warning'),text:'Please select at least one influencer platform account.',confirmButtonColor:'#6C63FF'}); return; }
 
       var $btn = $(this).prop('disabled',true).html('<span class="spinner"></span> Generating...');
 
-      App.api.campaigns.generate({ product_id: productId, influencer_ids: infIds, discount_type: discType, discount_value: discVal })
+      App.api.campaigns.generate({ product_id: productId, targets: targets, discount_type: discType, discount_value: discVal })
         .done(function(res){
           var codes = res.data;
           var html = codes.map(function(c){
             var fullUrl = window.location.origin + window.location.pathname.replace('index.php','') + 'landing.php?ref=' + c.ref_token;
+            var icon = platformIcons[c.platform] || '🌐';
             return `
               <div style="margin-bottom:16px;padding:16px;border-radius:12px;border:1.5px solid var(--border);background:var(--table-stripe)">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
                   <strong style="font-size:1rem">${c.influencer_name}</strong>
+                  <span class="badge platform-${c.platform}" style="font-size:0.75rem;padding:2px 8px">${icon} ${c.platform}</span>
                   <span style="color:var(--text-muted)">→</span>
                   <strong style="color:var(--primary)">${c.product_name}</strong>
                   <code style="background:var(--primary-light);color:var(--primary);padding:4px 10px;border-radius:8px;font-size:0.85rem;font-weight:800">${c.offer_code}</code>
@@ -204,8 +237,8 @@ App.Admin.Campaigns = (function ($) {
               </div>`;
           }).join('');
 
-          $('#generated-codes-list').html(html);
           $('#generated-results').show();
+          $('#generated-codes-list').html(html);
           Swal.fire({ icon:'success', title:res.message, showConfirmButton:false, timer:2000 });
           loadTable();
         })
