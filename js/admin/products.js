@@ -7,13 +7,36 @@ App.Admin = App.Admin || {};
 App.Admin.Products = (function ($) {
   'use strict';
   var _dt = null;
-  var catIcons = { software:'💻', food:'🍔', clothing:'👗', electronics:'📱', services:'🛠️', other:'📦' };
+  var _categories = [];
+
+  // Extract leading emoji from a category name like "🍔 Foodies" → "🍔"
+  function catIcon(name) {
+    if (!name) return '📦';
+    var m = name.match(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u);
+    return m ? m[0] : '📦';
+  }
 
   function init() {
     if (!App.auth.requireAuth('admin')) return;
     render();
+    loadCategories();
     loadTable();
     bindEvents();
+  }
+
+  function loadCategories() {
+    return App.api.users.categories().done(function(res) {
+      _categories = res.data || [];
+      var opts = '<option value="">— Select category —</option>' +
+        _categories.map(function(c) {
+          return '<option value="' + c.name + '">' + c.name + '</option>';
+        }).join('');
+      // Also append a plain fallback if list is empty
+      if (!_categories.length) {
+        opts += '<option value="other">📦 Other</option>';
+      }
+      $('#prod-category').html(opts);
+    });
   }
 
   function render() {
@@ -58,13 +81,8 @@ App.Admin.Products = (function ($) {
                   <div class="form-group">
                     <label class="form-label">${t('category')}</label>
                     <select class="form-control" id="prod-category">
-                      <option value="software">💻 Software</option>
-                      <option value="food">🍔 Food & Beverage</option>
-                      <option value="clothing">👗 Clothing & Fashion</option>
-                      <option value="electronics">📱 Electronics</option>
-                      <option value="services">🛠️ Services</option>
-                      <option value="other">📦 Other</option>
-                    </select>
+                       <option value="">Loading categories…</option>
+                     </select>
                   </div>
                 </div>
                 <div class="form-group">
@@ -131,14 +149,14 @@ App.Admin.Products = (function ($) {
         columns: [
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false, width:'40px' },
           { data: 'name', render: function(d,t,r){
-              var icon = catIcons[r.category] || '📦';
+              var icon = catIcon(r.category);
               return `<div style="display:flex;align-items:center;gap:10px">
                 <div style="width:38px;height:38px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${icon}</div>
                 <div><div style="font-weight:600">${r.name}</div><div style="font-size:0.75rem;color:var(--text-muted)">${r.description ? r.description.substring(0,40)+'…' : ''}</div></div>
               </div>`;
             }
           },
-          { data: 'category', render: function(d){ var icon = catIcons[d]||'📦'; return `<span class="badge badge-primary">${icon} ${d}</span>`; }},
+          { data: 'category', render: function(d){ return `<span class="badge badge-primary">${catIcon(d)} ${d}</span>`; }},
           { data: 'price', render: function(d,t,r){ return `<strong>${r.currency} ${parseFloat(d).toFixed(3)}</strong>`; }},
           { data: 'campaign_count', render: function(d){ return '<strong>'+d+'</strong>'; }},
           { data: 'total_clicks', render: function(d){ return '<span style="color:var(--info);font-weight:700">'+d+'</span>'; }},
