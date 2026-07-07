@@ -35,18 +35,18 @@ define('WEBHOOK_SECRET', 'InfluXWebhook$3cr3t2025');
 
 // ─── JSON Response Helpers ────────────────────
 
-function jsonResponse(array $data, int $code = 200): never {
+function jsonResponse(array $data, int $code = 200) {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
-function apiSuccess(mixed $data = [], string $message = 'Success'): never {
+function apiSuccess($data = [], string $message = 'Success') {
     jsonResponse(['success' => true, 'message' => $message, 'data' => $data]);
 }
 
-function apiError(string $message, int $code = 400, mixed $errors = null): never {
+function apiError(string $message, int $code = 400, $errors = null) {
     $payload = ['success' => false, 'message' => $message];
     if ($errors !== null) $payload['errors'] = $errors;
     jsonResponse($payload, $code);
@@ -88,7 +88,7 @@ function getInput(): array {
     return $_POST ?: [];
 }
 
-function param(string $key, mixed $default = null): mixed {
+function param(string $key, $default = null) {
     return $_GET[$key] ?? $default;
 }
 
