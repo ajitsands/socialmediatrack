@@ -70,6 +70,11 @@ App.router = (function ($) {
 
     _current = route;
 
+    // Stop background intervals when switching away from admin dashboard
+    if (route !== 'admin/dashboard' && App.Admin.Dashboard && typeof App.Admin.Dashboard.destroy === 'function') {
+      App.Admin.Dashboard.destroy();
+    }
+
     if (route === 'login') {
       showLogin();
       return;

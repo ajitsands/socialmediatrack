@@ -23,7 +23,7 @@ if ($action === 'list') {
         LEFT JOIN campaigns c ON c.influencer_id = u.id
         LEFT JOIN events e    ON e.campaign_id   = c.id AND e.type = 'conversion'
         WHERE u.role = 'influencer'
-        GROUP BY u.id
+        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.status, u.created_at
         ORDER BY u.created_at DESC
     ");
     apiSuccess($stmt->fetchAll());

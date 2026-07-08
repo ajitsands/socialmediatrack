@@ -61,7 +61,7 @@ if ($action === 'by_campaign') {
         JOIN products p ON p.id = c.product_id
         JOIN users    u ON u.id = c.influencer_id
         LEFT JOIN events e ON e.campaign_id = c.id
-        GROUP BY c.id
+        GROUP BY c.id, c.offer_code, c.status, p.name, p.category, u.name, u.social_handle, u.platform, c.created_at
         ORDER BY total_clicks DESC
     ");
     apiSuccess($stmt->fetchAll());
@@ -80,7 +80,7 @@ if ($action === 'by_influencer') {
         LEFT JOIN campaigns c ON c.influencer_id = u.id
         LEFT JOIN events    e ON e.campaign_id   = c.id
         WHERE u.role='influencer'
-        GROUP BY u.id
+        GROUP BY u.id, u.name, u.social_handle, u.platform
         ORDER BY total_conversions DESC
     ");
     apiSuccess($stmt->fetchAll());
@@ -97,7 +97,7 @@ if ($action === 'by_product') {
         FROM products p
         LEFT JOIN campaigns c ON c.product_id  = p.id
         LEFT JOIN events    e ON e.campaign_id  = c.id
-        GROUP BY p.id
+        GROUP BY p.id, p.name, p.category, p.price, p.currency
         ORDER BY total_conversions DESC
     ");
     apiSuccess($stmt->fetchAll());

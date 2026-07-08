@@ -15,7 +15,7 @@ if ($action === 'list') {
         FROM users u
         LEFT JOIN products p ON p.client_id = u.id
         WHERE u.role = 'client'
-        GROUP BY u.id
+        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.wallet_balance, u.status, u.created_at
         ORDER BY u.created_at DESC
     ");
     apiSuccess($stmt->fetchAll());

@@ -205,12 +205,8 @@ App.Admin.Clients = (function ($) {
       </div>
     `);
 
-    // Populate country codes dropdown
-    var ccHtml = App.countries.map(function (c) {
-      var selected = c.code === '+973' ? 'selected' : '';
-      return `<option value="${c.code}" ${selected}>${c.name} (${c.code})</option>`;
-    }).join('');
-    $('#client-country-code').html(ccHtml);
+    // Populate country codes dropdown using App.countries.renderSelect helper
+    App.countries.renderSelect('client-country-code', '+973');
   }
 
   function loadTable() {

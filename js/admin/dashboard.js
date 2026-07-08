@@ -208,5 +208,12 @@ App.Admin.Dashboard = (function ($) {
     }, 16);
   }
 
-  return { init };
+  function destroy() {
+    if (_liveInterval) {
+      clearInterval(_liveInterval);
+      _liveInterval = null;
+    }
+  }
+
+  return { init, destroy };
 }(jQuery));

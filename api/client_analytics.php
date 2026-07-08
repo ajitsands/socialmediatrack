@@ -70,7 +70,7 @@ if ($action === 'by_product') {
         LEFT JOIN campaigns c ON c.product_id = p.id
         LEFT JOIN events e ON e.campaign_id = c.id
         WHERE p.client_id = ?
-        GROUP BY p.id
+        GROUP BY p.id, p.name, p.category, p.price, p.currency, p.cpc_rate, p.cpl_rate
         ORDER BY total_conversions DESC
     ");
     $stmt->execute([$clientId]);
@@ -89,7 +89,7 @@ if ($action === 'by_influencer') {
         JOIN products p ON p.id = c.product_id
         LEFT JOIN events e ON e.campaign_id = c.id
         WHERE p.client_id = ?
-        GROUP BY u.id
+        GROUP BY u.id, u.name, u.social_handle
         ORDER BY total_conversions DESC
     ");
     $stmt->execute([$clientId]);
