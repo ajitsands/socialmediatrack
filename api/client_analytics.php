@@ -108,6 +108,7 @@ if ($action === 'visitor_leads') {
 
     $stmt = $db->prepare("
         SELECT e.id, e.visitor_name, e.visitor_phone, e.visitor_country_code, e.timestamp,
+               IFNULL(e.is_read, 0) as is_read,
                c.offer_code, IFNULL(c.platform, u.platform) as platform,
                p.name as product_name, p.id as product_id,
                u.name as influencer_name
@@ -116,10 +117,31 @@ if ($action === 'visitor_leads') {
         JOIN products  p ON p.id = c.product_id
         JOIN users     u ON u.id = c.influencer_id
         WHERE e.type = 'conversion' AND p.client_id = ? $where
-        ORDER BY e.timestamp DESC
+        ORDER BY e.is_read ASC, e.timestamp DESC
     ");
     $stmt->execute($params);
     apiSuccess($stmt->fetchAll());
+}
+
+// ─── Mark Lead as Read ───────────────────────
+if ($action === 'mark_read') {
+    $input   = getInput();
+    $eventId = (int)($input['event_id'] ?? 0);
+    if (!$eventId) apiError('event_id required.', 400);
+
+    // Verify this event belongs to this client's product
+    $check = $db->prepare("
+        SELECT e.id FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        WHERE e.id = ? AND p.client_id = ? AND e.type = 'conversion'
+    ");
+    $check->execute([$eventId, $clientId]);
+    if (!$check->fetch()) apiError('Event not found or access denied.', 403);
+
+    $upd = $db->prepare("UPDATE events SET is_read = 1 WHERE id = ?");
+    $upd->execute([$eventId]);
+    apiSuccess(['message' => 'Lead marked as read.']);
 }
 
 // ─── Wallet / Ledger Transaction History ──────

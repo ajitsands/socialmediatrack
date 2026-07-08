@@ -153,6 +153,14 @@ CREATE TABLE IF NOT EXISTS `events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: events", $log, $errors);
 
+// Migration: Add is_read to events table (for client lead read/unread tracking)
+try {
+    $evCols = $db->query("DESCRIBE `events`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('is_read', $evCols)) {
+        run($db, "ALTER TABLE `events` ADD COLUMN `is_read` TINYINT(1) NOT NULL DEFAULT 0 AFTER `timestamp`", "Migration: Add is_read column to events table", $log, $errors);
+    }
+} catch (Exception $e) {}
+
 run($db, "
 CREATE TABLE IF NOT EXISTS `points_config` (
   `id`                   INT AUTO_INCREMENT PRIMARY KEY,
