@@ -112,12 +112,18 @@ App.Admin.Campaigns = (function ($) {
 
       <!-- All Campaigns Table -->
       <div class="card">
-        <div class="card-header"><span class="card-title">📋 All Campaigns</span></div>
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;width:100%">
+          <span class="card-title">📋 All Campaigns</span>
+          <button class="btn btn-danger btn-sm" id="btn-bulk-delete" style="display:none;align-items:center;gap:6px;padding:6px 12px;font-weight:600">
+            🗑️ Delete Selected (<span id="bulk-delete-count">0</span>)
+          </button>
+        </div>
         <div class="card-body" style="padding:0">
           <div class="table-wrapper" style="padding:16px">
             <table id="tbl-campaigns" class="dataTable" style="width:100%">
               <thead>
                 <tr>
+                  <th style="width:30px;text-align:center;padding:10px 5px"><input type="checkbox" id="chk-select-all-campaigns" style="width:16px;height:16px;accent-color:var(--primary)"></th>
                   <th>#</th><th>Influencer</th><th>Product</th>
                   <th>Offer Code</th><th>Clicks</th><th>Conversions</th>
                   <th>Discount</th><th>Platform</th><th>Status</th><th>Actions</th>
@@ -248,14 +254,31 @@ App.Admin.Campaigns = (function ($) {
     $('#selected-influencers-body').html(html);
   }
 
+  function updateBulkDeleteButton() {
+    var checked = $('.campaign-bulk-chk:checked').length;
+    if (checked > 0) {
+      $('#bulk-delete-count').text(checked);
+      $('#btn-bulk-delete').css('display', 'inline-flex');
+    } else {
+      $('#btn-bulk-delete').css('display', 'none');
+    }
+  }
+
   function loadTable() {
     App.api.campaigns.list().done(function(res){
       if (_dt) { _dt.destroy(); _dt = null; }
+      $('#chk-select-all-campaigns').prop('checked', false);
+      updateBulkDeleteButton();
+
       _dt = $('#tbl-campaigns').DataTable({
         data: res.data,
         pageLength: 15,
-        order: [[0,'desc']],
+        order: [[1,'desc']],
         columns: [
+          { data: null, orderable:false, width:'30px', className:'text-center', render: function(d,t,r){
+              return `<input type="checkbox" class="campaign-bulk-chk" data-id="${r.id}" style="width:16px;height:16px;accent-color:var(--primary)">`;
+            }
+          },
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false, width:'40px' },
           { data: 'influencer_name', render: function(d,t,r){ return `<strong>${d}</strong>`; }},
           { data: 'product_name', render: function(d,t,r){ return `<strong>${d}</strong><br><small class="badge badge-muted">${r.product_category||''}</small>`; }},
@@ -388,6 +411,45 @@ App.Admin.Campaigns = (function ($) {
       var id = $(this).data('id');
       Swal.fire({ icon:'warning', title:'Delete Campaign?', text:'This will permanently delete the campaign and all tracking data.', showCancelButton:true, confirmButtonColor:'#ef4444', confirmButtonText:'Yes, Delete' })
         .then(function(r){ if(r.isConfirmed) App.api.campaigns.delete(id).done(function(){ Swal.fire({icon:'success',title:'Deleted!',showConfirmButton:false,timer:1200}); loadTable(); }).fail(App.api.handleError); });
+    });
+
+    // Select all checkbox change
+    $(document).off('change', '#chk-select-all-campaigns').on('change', '#chk-select-all-campaigns', function(){
+      var isChecked = $(this).is(':checked');
+      $('.campaign-bulk-chk').prop('checked', isChecked);
+      updateBulkDeleteButton();
+    });
+
+    // Row checkbox change
+    $(document).on('change', '.campaign-bulk-chk', function(){
+      var allChecked = $('.campaign-bulk-chk').length === $('.campaign-bulk-chk:checked').length;
+      $('#chk-select-all-campaigns').prop('checked', allChecked);
+      updateBulkDeleteButton();
+    });
+
+    // Bulk delete action
+    $(document).off('click', '#btn-bulk-delete').on('click', '#btn-bulk-delete', function(){
+      var ids = [];
+      $('.campaign-bulk-chk:checked').each(function(){
+        ids.push(parseInt($(this).data('id')));
+      });
+      if (!ids.length) return;
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Delete Selected Campaigns?',
+        text: 'This will permanently delete ' + ids.length + ' selected campaign(s) and all their tracking data.',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Yes, Delete All'
+      }).then(function(r){
+        if (r.isConfirmed) {
+          App.api.campaigns.deleteBulk(ids).done(function(){
+            Swal.fire({icon:'success', title:'Deleted!', showConfirmButton:false, timer:1200});
+            loadTable();
+          }).fail(App.api.handleError);
+        }
+      });
     });
   }
 

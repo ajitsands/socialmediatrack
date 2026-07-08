@@ -88,6 +88,7 @@ App.api = (function ($) {
     generate:     function (d) { return _request('campaigns', 'generate', d, 'POST'); },
     updateStatus: function (d) { return _request('campaigns', 'update_status', d, 'POST'); },
     delete:       function (id){ return _request('campaigns', 'delete', {id: id}, 'POST'); },
+    deleteBulk:   function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
   };
 
   /* ── Analytics ───────────────────────────── */

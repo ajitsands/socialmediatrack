@@ -168,11 +168,27 @@ if ($action === 'update_status') {
 // ─── Delete Campaign ──────────────────────────
 if ($action === 'delete') {
     requireAdmin();
-    $id = (int)($input['id'] ?? 0);
-    if (!$id) apiError('ID required.');
-    $stmt = $db->prepare("DELETE FROM campaigns WHERE id=?");
-    $stmt->execute([$id]);
-    apiSuccess([], 'Campaign deleted');
+    $id  = (int)($input['id'] ?? 0);
+    $ids = $input['ids'] ?? [];
+
+    if (!$id && empty($ids)) {
+        apiError('ID or IDs required.');
+    }
+
+    if (!empty($ids)) {
+        // Safe sanitisation and query construction
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) apiError('Invalid IDs.');
+        
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("DELETE FROM campaigns WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        apiSuccess([], 'Selected campaigns deleted successfully');
+    } else {
+        $stmt = $db->prepare("DELETE FROM campaigns WHERE id=?");
+        $stmt->execute([$id]);
+        apiSuccess([], 'Campaign deleted');
+    }
 }
 
 apiError('Invalid action');
