@@ -91,7 +91,7 @@ App.Influencer.Dashboard = (function ($) {
           <div class="table-wrapper" style="padding:12px">
             <table id="tbl-inf-dash-campaigns" class="dataTable" style="width:100%">
               <thead>
-                <tr><th>Product</th><th>Offer Code</th><th>Clicks</th><th>Conversions</th><th>Link</th></tr>
+                <tr><th>Product</th><th>Platform</th><th>Offer Code</th><th>Clicks</th><th>Conversions</th><th>Link</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -118,12 +118,20 @@ App.Influencer.Dashboard = (function ($) {
         paging: false, info: false, searching: false,
         columns: [
           { data: 'product_name', render: function(d,t,r){ return `<strong>${d}</strong><br><small class="badge badge-muted">${r.product_category||''}</small>`; }},
+          { data: 'platform', render: function(d){
+              var icons = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'👍',twitter:'🐦',other:'🌐'};
+              var icon = icons[d] || '🌐';
+              return `<span class="badge platform-${d}" style="font-size:0.8rem">${icon} ${(d||'').toUpperCase()}</span>`;
+            }
+          },
           { data: 'offer_code', render: function(d){ return `<code style="background:var(--badge-bg);padding:3px 8px;border-radius:6px;font-weight:700;color:var(--primary)">${d}</code>`; }},
           { data: 'total_clicks',      render: function(d){ return `<span style="color:var(--info);font-weight:700">${d}</span>`; }},
           { data: 'total_conversions', render: function(d){ return `<span style="color:var(--success);font-weight:700">${d}</span>`; }},
           { data: null, orderable:false, render: function(d,t,r){
               var url = 'landing.php?ref=' + encodeURIComponent(r.ref_token);
-              return `<button class="btn btn-secondary btn-sm btn-copy-dash-link" data-link="${url}">📋 Copy</button>`;
+              var icons = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'👍',twitter:'🐦',other:'🌐'};
+              var icon = icons[r.platform] || '🌐';
+              return `<button class="btn btn-secondary btn-sm btn-copy-dash-link" data-link="${url}">${icon} 📋 Copy</button>`;
             }
           },
         ]
@@ -190,7 +198,7 @@ App.Influencer.Campaigns = (function ($) {
           <div class="table-wrapper" style="padding:16px">
             <table id="tbl-my-campaigns" class="dataTable" style="width:100%">
               <thead>
-                <tr><th>#</th><th>Product</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Status</th><th>Link</th></tr>
+                <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Status</th><th>Link</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -210,6 +218,12 @@ App.Influencer.Campaigns = (function ($) {
         columns: [
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false },
           { data: 'product_name', render: function(d,t,r){ return `<strong>${d}</strong><br><small class="badge badge-muted">${r.product_category||''}</small>`; }},
+          { data: 'platform', render: function(d){
+              var icons = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'👍',twitter:'🐦',other:'🌐'};
+              var icon = icons[d] || '🌐';
+              return `<span class="badge platform-${d}">${icon} ${(d||'').toUpperCase()}</span>`;
+            }
+          },
           { data: 'offer_code', render: function(d){ return `<code style="background:var(--badge-bg);padding:4px 10px;border-radius:6px;font-weight:800;color:var(--primary);font-size:0.9rem">${d}</code>`; }},
           { data: 'discount_value', render: function(d,t,r){
               if (!d||d==0) return '<span class="badge badge-muted">None</span>';
@@ -226,7 +240,12 @@ App.Influencer.Campaigns = (function ($) {
           { data: 'status', render: function(d){ var cls={active:'badge-success',paused:'badge-warning',expired:'badge-danger'}; return `<span class="badge ${cls[d]||'badge-muted'}">${d}</span>`; }},
           { data: null, orderable:false, render: function(d,t,r){
               var url = 'landing.php?ref=' + encodeURIComponent(r.ref_token);
-              return `<button class="btn btn-primary btn-sm btn-copy-camp-link" data-link="${url}">📋 Copy Link</button>`;
+              var icons = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'👍',twitter:'🐦',other:'🌐'};
+              var icon = icons[r.platform] || '🌐';
+              return `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+                <span class="badge platform-${r.platform}" style="font-size:0.75rem;margin-bottom:2px">${icon} ${(r.platform||'').toUpperCase()}</span>
+                <button class="btn btn-primary btn-sm btn-copy-camp-link" data-link="${url}">📋 Copy Link</button>
+              </div>`;
             }
           },
         ]
