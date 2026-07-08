@@ -99,6 +99,7 @@ App.api = (function ($) {
     byProduct:     function ()     { return _request('analytics', 'by_product',    {}, 'GET'); },
     recentEvents:  function (lim)  { return _request('analytics', 'recent_events', {limit: lim||20}, 'GET'); },
     chartDaily:    function (days) { return _request('analytics', 'chart_daily',   {days: days||30}, 'GET'); },
+    visitorLeads:  function (pId)  { return _request('analytics', 'visitor_leads',  {product_id: pId||0}, 'GET'); },
   };
 
   /* ── Points ──────────────────────────────── */

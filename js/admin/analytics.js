@@ -22,6 +22,7 @@ App.Admin.Analytics = (function ($) {
           <button class="btn btn-secondary btn-sm tab-analytics-btn active" data-tab="campaigns">By Campaign</button>
           <button class="btn btn-secondary btn-sm tab-analytics-btn" data-tab="influencers">By Influencer</button>
           <button class="btn btn-secondary btn-sm tab-analytics-btn" data-tab="products">By Product</button>
+          <button class="btn btn-secondary btn-sm tab-analytics-btn" data-tab="visitors">👥 Visitors & Leads</button>
         </div>
       </div>
 
@@ -90,8 +91,38 @@ App.Admin.Analytics = (function ($) {
           </div>
         </div>
       </div>
+
+      <div class="card" id="analytics-tab-visitors" style="display:none">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:12px">
+          <span class="card-title">👥 Visitor Log & Leads</span>
+          <select class="form-control" id="visitor-product-filter" style="max-width:240px">
+            <option value="">— All Products —</option>
+          </select>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper" style="padding:16px">
+            <table id="tbl-analytics-visitors" class="dataTable" style="width:100%">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Visitor Name</th>
+                  <th>Contact Number</th>
+                  <th>Product</th>
+                  <th>Promo Code</th>
+                  <th>Channel (Platform)</th>
+                  <th>Influencer</th>
+                  <th>Date & Time</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     `);
   }
+
+  var _visitorsDt = null;
 
   function loadAll() {
     // Load overview stats
@@ -105,6 +136,15 @@ App.Admin.Analytics = (function ($) {
 
     // Chart
     loadChart(7);
+
+    // Populate products filter in visitor tab
+    App.api.products.list().done(function(res){
+      var opts = res.data.map(function(p){ return `<option value="${p.id}">${p.name}</option>`; }).join('');
+      $('#visitor-product-filter').html('<option value="">— All Products —</option>').append(opts);
+    });
+
+    // Load visitor logs
+    loadVisitors();
 
     // Campaign analytics
     App.api.analytics.byCampaign().done(function(res){
@@ -179,6 +219,34 @@ App.Admin.Analytics = (function ($) {
     });
   }
 
+  function loadVisitors(pId) {
+    App.api.analytics.visitorLeads(pId).done(function(res){
+      if (_visitorsDt) { _visitorsDt.destroy(); _visitorsDt = null; }
+      
+      var platformIcons = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐' };
+      
+      _visitorsDt = $('#tbl-analytics-visitors').DataTable({
+        data: res.data,
+        pageLength: 15,
+        order: [[7,'desc']],
+        columns: [
+          { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false, width:'40px' },
+          { data: 'visitor_name', render: function(d){ return `<strong>${d}</strong>`; }},
+          { data: 'visitor_phone', render: function(d,t,r){ return `<a href="tel:${r.visitor_country_code}${d}" style="text-decoration:none;font-weight:600;color:var(--primary)">${r.visitor_country_code} ${d}</a>`; }},
+          { data: 'product_name', render: function(d){ return `<strong>${d}</strong>`; }},
+          { data: 'offer_code', render: function(d){ return `<code style="background:var(--badge-bg);color:var(--primary);padding:3px 8px;border-radius:6px;font-weight:700">${d}</code>`; }},
+          { data: 'platform', render: function(d){
+              var icon = platformIcons[d] || '🌐';
+              return `<span class="badge platform-${d}">${icon} ${(d||'').toUpperCase()}</span>`;
+            }
+          },
+          { data: 'influencer_name' },
+          { data: 'timestamp', render: function(d){ return new Date(d).toLocaleString(); }}
+        ]
+      });
+    });
+  }
+
   function loadChart(days) {
     App.api.analytics.chartDaily(days).done(function(res){
       var data   = res.data;
@@ -211,7 +279,7 @@ App.Admin.Analytics = (function ($) {
       var tab = $(this).data('tab');
       $('.tab-analytics-btn').removeClass('active');
       $(this).addClass('active');
-      $('#analytics-tab-campaigns, #analytics-tab-influencers, #analytics-tab-products').hide();
+      $('#analytics-tab-campaigns, #analytics-tab-influencers, #analytics-tab-products, #analytics-tab-visitors').hide();
       $('#analytics-tab-' + tab).show();
       // Re-draw DataTable
       var tableId = '#tbl-analytics-' + tab;
@@ -223,6 +291,11 @@ App.Admin.Analytics = (function ($) {
       $('.chart-range-btn').removeClass('active');
       $(this).addClass('active');
       loadChart(days);
+    });
+
+    $(document).on('change', '#visitor-product-filter', function(){
+      var pId = $(this).val();
+      loadVisitors(pId);
     });
   }
 

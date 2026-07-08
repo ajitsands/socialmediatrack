@@ -137,4 +137,31 @@ if ($action === 'chart_daily') {
     apiSuccess($stmt->fetchAll());
 }
 
+// ─── Visitor Leads Report ─────────────────────
+if ($action === 'visitor_leads') {
+    requireAdmin();
+    $productId = (int)param('product_id', 0);
+    $where = '';
+    $params = [];
+    if ($productId > 0) {
+        $where = ' AND c.product_id = ?';
+        $params[] = $productId;
+    }
+
+    $stmt = $db->prepare("
+        SELECT e.id, e.visitor_name, e.visitor_phone, e.visitor_country_code, e.timestamp,
+               c.offer_code, IFNULL(c.platform, u.platform) as platform,
+               p.name as product_name, p.id as product_id,
+               u.name as influencer_name
+        FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        JOIN users     u ON u.id = c.influencer_id
+        WHERE e.type = 'conversion' $where
+        ORDER BY e.timestamp DESC
+    ");
+    $stmt->execute($params);
+    apiSuccess($stmt->fetchAll());
+}
+
 apiError('Invalid action');
