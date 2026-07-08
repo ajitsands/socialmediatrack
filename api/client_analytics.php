@@ -99,16 +99,26 @@ if ($action === 'by_influencer') {
 // ─── Visitor Lead Log (conversions) ───────────
 if ($action === 'visitor_leads') {
     $productId = (int)param('product_id', 0);
-    $where = '';
-    $params = [$clientId];
+    $where     = '';
+    $params    = [$clientId];
     if ($productId > 0) {
-        $where = ' AND p.id = ?';
-        $params[] = $productId;
+        $where      = ' AND p.id = ?';
+        $params[]   = $productId;
     }
+
+    // Detect whether is_read column exists (safe for servers not yet migrated)
+    $hasIsRead = false;
+    try {
+        $colCheck = $db->query("DESCRIBE `events`")->fetchAll(PDO::FETCH_COLUMN);
+        $hasIsRead = in_array('is_read', $colCheck);
+    } catch (Exception $e) {}
+
+    $isReadSelect  = $hasIsRead ? 'IFNULL(e.is_read, 0)' : '0';
+    $isReadOrderBy = $hasIsRead ? 'e.is_read ASC,' : '';
 
     $stmt = $db->prepare("
         SELECT e.id, e.visitor_name, e.visitor_phone, e.visitor_country_code, e.timestamp,
-               IFNULL(e.is_read, 0) as is_read,
+               $isReadSelect as is_read,
                c.offer_code, IFNULL(c.platform, u.platform) as platform,
                p.name as product_name, p.id as product_id,
                u.name as influencer_name
@@ -117,7 +127,7 @@ if ($action === 'visitor_leads') {
         JOIN products  p ON p.id = c.product_id
         JOIN users     u ON u.id = c.influencer_id
         WHERE e.type = 'conversion' AND p.client_id = ? $where
-        ORDER BY e.is_read ASC, e.timestamp DESC
+        ORDER BY $isReadOrderBy e.timestamp DESC
     ");
     $stmt->execute($params);
     apiSuccess($stmt->fetchAll());
