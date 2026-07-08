@@ -91,10 +91,13 @@
     $('#btn-submit').text(m('submit_btn'));
     $('#btn-skip').text(m('skip_btn'));
 
-    // Load campaign info
+    // Load campaign info — send ref via POST body to bypass server GET param filtering
     $.ajax({
-      url: 'api/landing.php?action=info&ref=' + encodeURIComponent(_ref),
-      type: 'GET', dataType: 'json'
+      url: 'api/landing.php',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ action: 'info', ref: _ref }),
+      dataType: 'json'
     }).done(function (res) {
       if (!res.success) { showError(res.message); return; }
       _campaign = res.data;

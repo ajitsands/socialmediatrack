@@ -8,13 +8,17 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/crypto.php';
 
-$action = param('action', 'info');
+// Read action + input — POST body takes priority (bypasses suhosin/server GET filtering)
 $input  = getInput();
+$action = $input['action'] ?? param('action', 'info');
 
-// Helper: parse ref from GET or raw QUERY_STRING (server compat)
-function getRef(): string {
+// Helper: read ref from POST body first, then GET, then raw QUERY_STRING
+function getRef(array $input): string {
+    // 1. POST body (most reliable on restricted servers)
+    if (!empty($input['ref'])) return $input['ref'];
+    // 2. GET param
     if (!empty($_GET['ref'])) return $_GET['ref'];
-    // Fallback: parse raw QUERY_STRING manually (some server configs strip $_GET)
+    // 3. Raw QUERY_STRING fallback (some CGI configs don't populate $_GET)
     $qs = $_SERVER['QUERY_STRING'] ?? '';
     if ($qs && preg_match('/(?:^|&)ref=([^&]+)/', $qs, $m)) {
         return urldecode($m[1]);
@@ -33,13 +37,14 @@ function getIpHash(): string {
 
 // ─── Get Campaign Info from ref token ─────────
 if ($action === 'info') {
-    $ref = getRef();
+    $ref = getRef($input);
     if (!$ref) apiError('Invalid link — missing reference token.', 400);
 
     // Check openssl is available
     if (!function_exists('openssl_decrypt')) {
-        apiError('Server configuration error: encryption extension not available. Please contact support.', 500);
+        apiError('Server error: openssl extension not available. Please enable it in cPanel PHP Extensions.', 500);
     }
+
 
     $db   = getDB();
     $data = decryptToken($ref);
