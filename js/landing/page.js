@@ -103,6 +103,26 @@
       _campaign = res.data;
       populatePage(_campaign);
 
+      // Check if already unlocked locally or in session
+      var savedUnlock = localStorage.getItem('unlocked_camp_' + _campaign.id);
+      if (_campaign.already_converted || savedUnlock) {
+        var offerCode = _campaign.offer_code;
+        var redirUrl = _campaign.product_url || '#';
+        if (parseFloat(_campaign.discount_value) > 0) {
+          var sep = redirUrl.indexOf('?') !== -1 ? '&' : '?';
+          redirUrl += sep + 'promo=' + encodeURIComponent(offerCode) + '&discount=' + encodeURIComponent(_campaign.discount_value);
+        }
+        if (savedUnlock) {
+          try {
+            var parsed = JSON.parse(savedUnlock);
+            offerCode = parsed.offer_code || offerCode;
+            redirUrl = parsed.redirect_url || redirUrl;
+          } catch(e){}
+        }
+        showSuccess(offerCode, redirUrl);
+        return;
+      }
+
       // Record click
       $.ajax({ url: 'api/landing.php', type: 'POST', contentType: 'application/json', data: JSON.stringify({ action: 'click', ref: _ref }) });
 
@@ -199,6 +219,11 @@
       if (!res.success) {
         Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return;
       }
+      // Save unlock status locally
+      localStorage.setItem('unlocked_camp_' + _campaign.id, JSON.stringify({
+        offer_code: res.data.offer_code,
+        redirect_url: res.data.redirect_url
+      }));
       launchConfetti();
       showSuccess(res.data.offer_code, res.data.redirect_url);
     }).fail(function () {

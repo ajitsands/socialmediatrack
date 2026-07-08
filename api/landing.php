@@ -75,9 +75,13 @@ if ($action === 'info') {
     $cStats->execute([$campaignId]);
     $stats = $cStats->fetch();
 
+    // Check if already converted in current session
+    $alreadyConverted = !empty($_SESSION['converted_' . $campaignId]);
+
     apiSuccess(array_merge($campaign, [
         'total_clicks'      => (int)$stats['clicks'],
         'total_conversions' => (int)$stats['conversions'],
+        'already_converted' => $alreadyConverted,
     ]));
 }
 
@@ -91,13 +95,19 @@ if ($action === 'click') {
 
     $campaignId = (int)$data['campaign_id'];
 
-    // Record click event
-    $ipHash = getIpHash();
-    $ua     = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
-
+    // Deduplicate clicks using active PHP session
+    $sessionKey = 'clicked_' . $campaignId;
     $db = getDB();
-    $stmt = $db->prepare("INSERT INTO events (campaign_id, type, ip_hash, user_agent) VALUES (?, 'click', ?, ?)");
-    $stmt->execute([$campaignId, $ipHash, $ua]);
+    if (empty($_SESSION[$sessionKey])) {
+        $_SESSION[$sessionKey] = true;
+        
+        // Record click event
+        $ipHash = getIpHash();
+        $ua     = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
+
+        $stmt = $db->prepare("INSERT INTO events (campaign_id, type, ip_hash, user_agent) VALUES (?, 'click', ?, ?)");
+        $stmt->execute([$campaignId, $ipHash, $ua]);
+    }
 
     // Return updated click count
     $cnt = $db->prepare("SELECT COUNT(*) FROM events WHERE campaign_id=? AND type='click'");
@@ -126,6 +136,26 @@ if ($action === 'convert') {
     $stmt->execute([$campaignId]);
     $camp = $stmt->fetch();
     if (!$camp) apiError('Campaign not found or inactive.');
+
+    // Build redirect URL
+    $redirectUrl = $camp['product_url'] ?: '#';
+    if ($redirectUrl && $camp['discount_value'] > 0) {
+        $sep = str_contains($redirectUrl, '?') ? '&' : '?';
+        $redirectUrl .= "{$sep}promo={$camp['offer_code']}&discount={$camp['discount_value']}";
+    }
+
+    // Deduplicate conversions: check if this phone number already converted for this campaign
+    $dup = $db->prepare("SELECT id FROM events WHERE campaign_id=? AND visitor_phone=? AND type='conversion' LIMIT 1");
+    $dup->execute([$campaignId, $visitorPhone]);
+    $existing = $dup->fetch();
+
+    if ($existing) {
+        // Return existing redirect url and code, but DO NOT log conversion and DO NOT credit points
+        apiSuccess(['redirect_url' => $redirectUrl, 'offer_code' => $camp['offer_code']], 'Discount already claimed!');
+    }
+
+    // Mark in session
+    $_SESSION['converted_' . $campaignId] = true;
 
     // Insert conversion event
     $ipHash = getIpHash();
