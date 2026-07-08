@@ -111,6 +111,32 @@ try {
     }
 } catch (Exception $e) {}
 
+// Migration: users role column and wallet_balance
+try {
+    $cols = $db->query("DESCRIBE `users`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('wallet_balance', $cols)) {
+        run($db, "ALTER TABLE `users` ADD COLUMN `wallet_balance` DECIMAL(10,3) DEFAULT 0.000 AFTER `status`", "Migration: Add wallet_balance column to users table", $log, $errors);
+    }
+    // Modify ENUM role definition to include 'client'
+    run($db, "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('admin','influencer','client') DEFAULT 'influencer'", "Migration: Update user role ENUM to support client", $log, $errors);
+} catch (Exception $e) {}
+
+// Migration: products client columns
+try {
+    $cols = $db->query("DESCRIBE `products`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('client_id', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `client_id` INT DEFAULT NULL AFTER `id`", "Migration: Add client_id column to products table", $log, $errors);
+        run($db, "ALTER TABLE `products` ADD CONSTRAINT fk_product_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE SET NULL", "Migration: Add product client foreign key constraint", $log, $errors);
+    }
+    if (!in_array('cpc_rate', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `cpc_rate` DECIMAL(10,3) DEFAULT 0.000 AFTER `price`", "Migration: Add cpc_rate column to products table", $log, $errors);
+    }
+    if (!in_array('cpl_rate', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `cpl_rate` DECIMAL(10,3) DEFAULT 0.000 AFTER `cpc_rate`", "Migration: Add cpl_rate column to products table", $log, $errors);
+    }
+} catch (Exception $e) {}
+
+
 run($db, "
 CREATE TABLE IF NOT EXISTS `events` (
   `id`                  INT AUTO_INCREMENT PRIMARY KEY,
@@ -154,6 +180,19 @@ CREATE TABLE IF NOT EXISTS `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: wallet_transactions", $log, $errors);
 
+run($db, "
+CREATE TABLE IF NOT EXISTS `client_wallet_transactions` (
+  `id`             INT AUTO_INCREMENT PRIMARY KEY,
+  `client_id`      INT NOT NULL,
+  `amount`         DECIMAL(10,3) NOT NULL,
+  `type`           ENUM('credit','debit') NOT NULL,
+  `payment_method` ENUM('cash','bank_transfer','cheque','qr_pay','system') NOT NULL,
+  `note`           TEXT,
+  `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`client_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: client_wallet_transactions", $log, $errors);
+
 
 // ─── Seed Data ────────────────────────────────
 // Points config
@@ -170,6 +209,22 @@ if ($existingAdmin->fetchColumn() == 0) {
     $stmt = $db->prepare("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, 'admin', 'active')");
     $stmt->execute(['Super Admin', 'admin@influx.com', password_hash('admin@123', PASSWORD_BCRYPT)]);
     $log[] = "✅ Seeded: Admin user (admin@influx.com / admin@123)";
+}
+
+// Client user
+$existingClient = $db->prepare("SELECT id FROM users WHERE email = ?");
+$existingClient->execute(['client@influx.com']);
+$clientId = $existingClient->fetchColumn();
+if (!$clientId) {
+    $stmt = $db->prepare("INSERT INTO users (name, email, password, role, wallet_balance, status) VALUES (?, ?, ?, 'client', ?, 'active')");
+    $stmt->execute(['Client Company', 'client@influx.com', password_hash('client@123', PASSWORD_BCRYPT), 15.000]);
+    $clientId = $db->lastInsertId();
+    
+    // Add opening ledger transaction
+    $txn = $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'credit', 'bank_transfer', ?)");
+    $txn->execute([$clientId, 15.000, 'Opening Balance']);
+    
+    $log[] = "✅ Seeded: Client user (client@influx.com / client@123) with BHD 15.000 balance";
 }
 
 // Seed influencer categories with emojis
@@ -275,22 +330,24 @@ $log[] = "✅ Seeded: 8 influencer accounts and their multiple social media plat
 
 
 // Sample products
+$clientId = $db->query("SELECT id FROM users WHERE email='client@influx.com'")->fetchColumn();
+
 $products = [
-    ['ProSuite ERP',         'software',    'Complete business management ERP for SMEs',          299.000, 'BHD', 'https://example.com/prosuite',     'https://example.com/prosuite/demo'],
-    ['Gourmet Box Monthly',  'food',        'Premium curated food box delivered monthly',          15.000,  'BHD', 'https://example.com/gourmetbox',   ''],
-    ['UrbanWear Collection', 'clothing',    'Trendy urban fashion for modern lifestyles',           25.000,  'BHD', 'https://example.com/urbanwear',    ''],
-    ['SmartHome Hub',        'electronics', 'Central hub for all your smart home devices',          49.000,  'BHD', 'https://example.com/smarthome',    'https://example.com/smarthome/demo'],
-    ['FitLife Premium',      'services',    'Online fitness coaching and nutrition planning',        20.000,  'BHD', 'https://example.com/fitlife',      ''],
+    ['ProSuite ERP',         'software',    'Complete business management ERP for SMEs',          299.000, 0.050, 0.500, 'BHD', 'https://example.com/prosuite',     'https://example.com/prosuite/demo'],
+    ['Gourmet Box Monthly',  'food',        'Premium curated food box delivered monthly',          15.000,  0.010, 0.150, 'BHD', 'https://example.com/gourmetbox',   ''],
+    ['UrbanWear Collection', 'clothing',    'Trendy urban fashion for modern lifestyles',           25.000,  0.020, 0.200, 'BHD', 'https://example.com/urbanwear',    ''],
+    ['SmartHome Hub',        'electronics', 'Central hub for all your smart home devices',          49.000,  0.030, 0.300, 'BHD', 'https://example.com/smarthome',    'https://example.com/smarthome/demo'],
+    ['FitLife Premium',      'services',    'Online fitness coaching and nutrition planning',        20.000,  0.015, 0.250, 'BHD', 'https://example.com/fitlife',      ''],
 ];
-foreach ($products as [$name, $cat, $desc, $price, $cur, $url, $demo]) {
+foreach ($products as [$name, $cat, $desc, $price, $cpc, $cpl, $cur, $url, $demo]) {
     $chk = $db->prepare("SELECT COUNT(*) FROM products WHERE name=?");
     $chk->execute([$name]);
     if ($chk->fetchColumn() == 0) {
-        $s = $db->prepare("INSERT INTO products (name,category,description,price,currency,product_url,demo_url,status) VALUES (?,?,?,?,?,?,?,'active')");
-        $s->execute([$name, $cat, $desc, $price, $cur, $url, $demo]);
+        $s = $db->prepare("INSERT INTO products (client_id,name,category,description,price,cpc_rate,cpl_rate,currency,product_url,demo_url,status) VALUES (?,?,?,?,?,?,?,?,?,?,'active')");
+        $s->execute([$clientId ?: null, $name, $cat, $desc, $price, $cpc, $cpl, $cur, $url, $demo]);
     }
 }
-$log[] = "✅ Seeded: 5 sample products";
+$log[] = "✅ Seeded: 5 sample products with CPC/CPL rates and client assignment";
 
 // ─── Output ───────────────────────────────────
 ?>
@@ -324,7 +381,8 @@ $log[] = "✅ Seeded: 5 sample products";
     <strong>⚠️ Important:</strong> Delete or rename <code>setup.php</code> after setup is complete!<br>
     Default credentials:<br>
     <pre>Admin:      admin@influx.com / admin@123
-Influencer: ajit.kumar@gmail.com / inf@123</pre>
+Influencer: ajit.kumar@gmail.com / inf@123
+Client:     client@influx.com / client@123</pre>
   </div>
 
   <p><a href="index.php">→ Go to the Portal</a></p>

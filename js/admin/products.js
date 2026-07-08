@@ -20,6 +20,7 @@ App.Admin.Products = (function ($) {
     if (!App.auth.requireAuth('admin')) return;
     render();
     loadCategories();
+    loadClients();
     loadTable();
     bindEvents();
   }
@@ -36,6 +37,16 @@ App.Admin.Products = (function ($) {
         opts += '<option value="other">📦 Other</option>';
       }
       $('#prod-category').html(opts);
+    });
+  }
+
+  function loadClients() {
+    return App.api.clients.list().done(function(res) {
+      var opts = '<option value="">— Internal Product (No Client) —</option>' +
+        res.data.map(function(c) {
+          return `<option value="${c.id}">${c.name}</option>`;
+        }).join('');
+      $('#prod-client').html(opts);
     });
   }
 
@@ -85,15 +96,30 @@ App.Admin.Products = (function ($) {
                      </select>
                   </div>
                 </div>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label">Client Owner (Wallet Account)</label>
+                    <select class="form-control" id="prod-client">
+                       <option value="">— Internal Product (No Client) —</option>
+                     </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">${t('status')}</label>
+                    <select class="form-control" id="prod-status">
+                      <option value="active">✅ Active</option>
+                      <option value="inactive">❌ Inactive</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="form-group">
                   <label class="form-label">${t('description')}</label>
                   <textarea class="form-control" id="prod-desc" placeholder="Product description..." rows="3"></textarea>
                 </div>
-                <div class="grid-2">
+                <div class="grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
                   <div class="form-group">
                     <label class="form-label">${t('price')} <span class="req">*</span></label>
                     <div class="input-group">
-                      <select class="form-control" id="prod-currency" style="max-width:90px">
+                      <select class="form-control" id="prod-currency" style="max-width:80px;padding:4px">
                         <option value="BHD">BHD</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -102,15 +128,16 @@ App.Admin.Products = (function ($) {
                         <option value="INR">INR</option>
                         <option value="PKR">PKR</option>
                       </select>
-                      <input type="number" class="form-control" id="prod-price" placeholder="0.000" min="0" step="0.001">
+                      <input type="number" class="form-control" id="prod-price" placeholder="0.000" min="0" step="0.001" style="flex:1">
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">${t('status')}</label>
-                    <select class="form-control" id="prod-status">
-                      <option value="active">✅ Active</option>
-                      <option value="inactive">❌ Inactive</option>
-                    </select>
+                    <label class="form-label">CPC Rate (BHD) <span class="req">*</span></label>
+                    <input type="number" class="form-control" id="prod-cpc-rate" placeholder="0.000" min="0" step="0.001" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">CPL Rate (BHD) <span class="req">*</span></label>
+                    <input type="number" class="form-control" id="prod-cpl-rate" placeholder="0.000" min="0" step="0.001" required>
                   </div>
                 </div>
                 <div class="form-group">
@@ -150,9 +177,19 @@ App.Admin.Products = (function ($) {
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false, width:'40px' },
           { data: 'name', render: function(d,t,r){
               var icon = catIcon(r.category);
+              var clientLabel = r.client_name 
+                ? `<div style="font-size:0.72rem;color:#6C63FF;font-weight:500">🏢 ${r.client_name}</div>` 
+                : `<div style="font-size:0.72rem;color:var(--text-muted)">Internal</div>`;
+
+              var ratesLabel = `<div style="font-size:0.72rem;color:var(--text-muted)">CPC: <strong>${parseFloat(r.cpc_rate).toFixed(3)}</strong> | CPL: <strong>${parseFloat(r.cpl_rate).toFixed(3)}</strong></div>`;
+
               return `<div style="display:flex;align-items:center;gap:10px">
                 <div style="width:38px;height:38px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${icon}</div>
-                <div><div style="font-weight:600">${r.name}</div><div style="font-size:0.75rem;color:var(--text-muted)">${r.description ? r.description.substring(0,40)+'…' : ''}</div></div>
+                <div>
+                  <div style="font-weight:600">${r.name}</div>
+                  ${clientLabel}
+                  ${ratesLabel}
+                </div>
               </div>`;
             }
           },
@@ -183,6 +220,9 @@ App.Admin.Products = (function ($) {
       $('#modal-prod-title').text(App.i18n.t('add_product'));
       $('#form-product')[0].reset();
       $('#prod-id').val('');
+      $('#prod-cpc-rate').val('0.000');
+      $('#prod-cpl-rate').val('0.000');
+      $('#prod-client').val('');
       $('#modal-product').show();
     });
 
@@ -201,6 +241,9 @@ App.Admin.Products = (function ($) {
         $('#prod-url').val(r.product_url);
         $('#prod-demo').val(r.demo_url);
         $('#prod-status').val(r.status);
+        $('#prod-client').val(r.client_id || '');
+        $('#prod-cpc-rate').val(parseFloat(r.cpc_rate).toFixed(3));
+        $('#prod-cpl-rate').val(parseFloat(r.cpl_rate).toFixed(3));
         $('#modal-product').show();
       }).fail(App.api.handleError);
     });
@@ -209,11 +252,19 @@ App.Admin.Products = (function ($) {
 
     $(document).on('click','#btn-save-prod', function(){
       var data = {
-        id: $('#prod-id').val()||null, name: $('#prod-name').val(),
-        category: $('#prod-category').val(), description: $('#prod-desc').val(),
-        price: $('#prod-price').val(), currency: $('#prod-currency').val(),
-        image_url: $('#prod-image').val(), product_url: $('#prod-url').val(),
-        demo_url: $('#prod-demo').val(), status: $('#prod-status').val(),
+        id: $('#prod-id').val()||null, 
+        name: $('#prod-name').val(),
+        category: $('#prod-category').val(), 
+        description: $('#prod-desc').val(),
+        price: $('#prod-price').val(), 
+        currency: $('#prod-currency').val(),
+        image_url: $('#prod-image').val(), 
+        product_url: $('#prod-url').val(),
+        demo_url: $('#prod-demo').val(), 
+        status: $('#prod-status').val(),
+        client_id: $('#prod-client').val() || null,
+        cpc_rate: $('#prod-cpc-rate').val() || 0,
+        cpl_rate: $('#prod-cpl-rate').val() || 0,
       };
       var action = data.id ? App.api.products.update(data) : App.api.products.create(data);
       var $btn = $(this).prop('disabled',true).html('<span class="spinner"></span>');

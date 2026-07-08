@@ -44,6 +44,7 @@ header("Pragma: no-cache");
     <div class="login-tabs" style="margin-bottom:24px">
       <button class="login-tab-btn active" data-role="admin">🛡️ Admin</button>
       <button class="login-tab-btn" data-role="influencer">⭐ Influencer</button>
+      <button class="login-tab-btn" data-role="client">🏢 Client</button>
     </div>
 
     <!-- Login Form -->
@@ -147,25 +148,30 @@ header("Pragma: no-cache");
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- App modules -->
-<script src="js/i18n.js?v=1.1.1"></script>
-<script src="js/countries.js?v=1.1.1"></script>
-<script src="js/auth.js?v=1.1.1"></script>
-<script src="js/api.js?v=1.1.1"></script>
+<script src="js/i18n.js?v=1.1.2"></script>
+<script src="js/countries.js?v=1.1.2"></script>
+<script src="js/auth.js?v=1.1.2"></script>
+<script src="js/api.js?v=1.1.2"></script>
 
 <!-- Admin modules -->
-<script src="js/admin/dashboard.js?v=1.1.1"></script>
-<script src="js/admin/influencers.js?v=1.1.1"></script>
-<script src="js/admin/products.js?v=1.1.1"></script>
-<script src="js/admin/campaigns.js?v=1.1.1"></script>
-<script src="js/admin/analytics.js?v=1.1.1"></script>
-<script src="js/admin/points.js?v=1.1.1"></script>
-<script src="js/admin/wallet.js?v=1.1.1"></script>
+<script src="js/admin/dashboard.js?v=1.1.2"></script>
+<script src="js/admin/influencers.js?v=1.1.2"></script>
+<script src="js/admin/clients.js?v=1.1.2"></script>
+<script src="js/admin/products.js?v=1.1.2"></script>
+<script src="js/admin/campaigns.js?v=1.1.2"></script>
+<script src="js/admin/analytics.js?v=1.1.2"></script>
+<script src="js/admin/points.js?v=1.1.2"></script>
+<script src="js/admin/wallet.js?v=1.1.2"></script>
 
 <!-- Influencer modules -->
-<script src="js/influencer/dashboard.js?v=1.1.1"></script>
+<script src="js/influencer/dashboard.js?v=1.1.2"></script>
+
+<!-- Client modules -->
+<script src="js/client/dashboard.js?v=1.1.2"></script>
+<script src="js/client/wallet.js?v=1.1.2"></script>
 
 <!-- Router (boot last) -->
-<script src="js/app.js?v=1.1.1"></script>
+<script src="js/app.js?v=1.1.2"></script>
 
 </body>
 </html>

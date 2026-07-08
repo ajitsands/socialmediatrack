@@ -57,10 +57,11 @@ if ($action === 'info') {
         SELECT c.id, c.offer_code, c.discount_type, c.discount_value, c.status,
                p.name as product_name, p.description as product_desc,
                p.price, p.currency, p.image_url, p.product_url, p.demo_url,
-               p.category,
+               p.category, p.client_id, cl.wallet_balance as client_balance,
                u.name as influencer_name, u.social_handle, IFNULL(c.platform, u.platform) as platform
         FROM campaigns c
         JOIN products p ON p.id = c.product_id
+        LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client'
         JOIN users    u ON u.id = c.influencer_id
         WHERE c.id = ?
     ");
@@ -69,6 +70,11 @@ if ($action === 'info') {
 
     if (!$campaign) apiError('Campaign not found.', 404);
     if ($campaign['status'] !== 'active') apiError('This promotional link has expired.', 410);
+
+    // Check client balance limit: 0.100 BHD
+    if ($campaign['client_id'] !== null && (float)$campaign['client_balance'] < 0.100) {
+        apiError('This promotional link has expired.', 410);
+    }
 
     // Stats
     $cStats = $db->prepare("SELECT COUNT(CASE WHEN type='click' THEN 1 END) as clicks, COUNT(CASE WHEN type='conversion' THEN 1 END) as conversions FROM events WHERE campaign_id=?");
@@ -107,6 +113,32 @@ if ($action === 'click') {
 
         $stmt = $db->prepare("INSERT INTO events (campaign_id, type, ip_hash, user_agent) VALUES (?, 'click', ?, ?)");
         $stmt->execute([$campaignId, $ipHash, $ua]);
+
+        // Client Wallet CPC Deduction
+        $stmtRate = $db->prepare("
+            SELECT p.client_id, p.cpc_rate, cl.wallet_balance
+            FROM campaigns c
+            JOIN products p ON p.id = c.product_id
+            LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client'
+            WHERE c.id = ?
+        ");
+        $stmtRate->execute([$campaignId]);
+        $prodRate = $stmtRate->fetch();
+
+        if ($prodRate && $prodRate['client_id'] !== null) {
+            $cpc = (float)$prodRate['cpc_rate'];
+            if ($cpc > 0 && (float)$prodRate['wallet_balance'] >= 0.100) {
+                try {
+                    $db->beginTransaction();
+                    $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$cpc, $prodRate['client_id']]);
+                    $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'debit', 'system', ?)")
+                       ->execute([$prodRate['client_id'], $cpc, 'CPC Click on Campaign #' . $campaignId]);
+                    $db->commit();
+                } catch (Exception $e) {
+                    $db->rollBack();
+                }
+            }
+        }
     }
 
     // Return updated click count
@@ -132,10 +164,15 @@ if ($action === 'convert') {
 
     // Get campaign to return redirect URL
     $db   = getDB();
-    $stmt = $db->prepare("SELECT c.offer_code, c.discount_value, c.discount_type, p.product_url, p.demo_url FROM campaigns c JOIN products p ON p.id=c.product_id WHERE c.id=? AND c.status='active'");
+    $stmt = $db->prepare("SELECT c.offer_code, c.discount_value, c.discount_type, p.product_url, p.demo_url, p.client_id, p.cpl_rate, cl.wallet_balance FROM campaigns c JOIN products p ON p.id=c.product_id LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client' WHERE c.id=? AND c.status='active'");
     $stmt->execute([$campaignId]);
     $camp = $stmt->fetch();
     if (!$camp) apiError('Campaign not found or inactive.');
+
+    // Check client balance limit: 0.100 BHD
+    if ($camp['client_id'] !== null && (float)$camp['wallet_balance'] < 0.100) {
+        apiError('This promotional link has expired.', 410);
+    }
 
     // Build redirect URL
     $redirectUrl = $camp['product_url'] ?: '#';
@@ -163,6 +200,22 @@ if ($action === 'convert') {
 
     $ins = $db->prepare("INSERT INTO events (campaign_id,type,visitor_name,visitor_phone,visitor_country_code,promo_entered,ip_hash,user_agent) VALUES (?,'conversion',?,?,?,?,?,?)");
     $ins->execute([$campaignId, $visitorName, $visitorPhone, $countryCode, $promoCode ?: $camp['offer_code'], $ipHash, $ua]);
+
+    // Client Wallet CPL Deduction
+    if ($camp['client_id'] !== null) {
+        $cpl = (float)$camp['cpl_rate'];
+        if ($cpl > 0 && (float)$camp['wallet_balance'] >= 0.100) {
+            try {
+                $db->beginTransaction();
+                $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$cpl, $camp['client_id']]);
+                $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'debit', 'system', ?)")
+                   ->execute([$camp['client_id'], $cpl, 'CPL Lead on Campaign #' . $campaignId]);
+                $db->commit();
+            } catch (Exception $e) {
+                $db->rollBack();
+            }
+        }
+    }
 
     // Auto-credit points check
     $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();

@@ -13,6 +13,7 @@ App.router = (function ($) {
     'login':               renderLogin,
     'admin/dashboard':     function(){ App.Admin.Dashboard.init(); },
     'admin/influencers':   function(){ App.Admin.Influencers.init(); },
+    'admin/clients':       function(){ App.Admin.Clients.init(); },
     'admin/products':      function(){ App.Admin.Products.init(); },
     'admin/campaigns':     function(){ App.Admin.Campaigns.init(); },
     'admin/analytics':     function(){ App.Admin.Analytics.init(); },
@@ -21,6 +22,8 @@ App.router = (function ($) {
     'influencer/dashboard':function(){ App.Influencer.Dashboard.init(); },
     'influencer/campaigns':function(){ App.Influencer.Campaigns.init(); },
     'influencer/wallet':   function(){ App.Influencer.Wallet.init(); },
+    'client/dashboard':    function(){ App.Client.Dashboard.init(); },
+    'client/wallet':       function(){ App.Client.Wallet.init(); },
   };
 
   function go(route) {
@@ -36,7 +39,9 @@ App.router = (function ($) {
 
     // Redirect logged-in users away from login
     if (route === 'login' && App.auth.isLoggedIn()) {
-      var defaultRoute = App.auth.isAdmin() ? 'admin/dashboard' : 'influencer/dashboard';
+      var defaultRoute = 'influencer/dashboard';
+      if (App.auth.isAdmin()) defaultRoute = 'admin/dashboard';
+      else if (App.auth.isClient()) defaultRoute = 'client/dashboard';
       go(defaultRoute); return;
     }
 
@@ -47,7 +52,20 @@ App.router = (function ($) {
 
     // Admin-only routes
     if (route.startsWith('admin/') && !App.auth.isAdmin()) {
-      go('influencer/dashboard'); return;
+      var fallback = App.auth.isClient() ? 'client/dashboard' : 'influencer/dashboard';
+      go(fallback); return;
+    }
+
+    // Influencer-only routes
+    if (route.startsWith('influencer/') && !App.auth.isInfluencer() && !App.auth.isAdmin()) {
+      var fallback = App.auth.isClient() ? 'client/dashboard' : 'login';
+      go(fallback); return;
+    }
+
+    // Client-only routes
+    if (route.startsWith('client/') && !App.auth.isClient() && !App.auth.isAdmin()) {
+      var fallback = App.auth.isInfluencer() ? 'influencer/dashboard' : 'login';
+      go(fallback); return;
     }
 
     _current = route;
@@ -90,6 +108,7 @@ App.router = (function ($) {
     var titles = {
       'admin/dashboard':     App.i18n.t('dashboard'),
       'admin/influencers':   App.i18n.t('influencers'),
+      'admin/clients':       'Manage Clients',
       'admin/products':      App.i18n.t('products'),
       'admin/campaigns':     App.i18n.t('campaigns'),
       'admin/analytics':     App.i18n.t('analytics'),
@@ -98,14 +117,17 @@ App.router = (function ($) {
       'influencer/dashboard':App.i18n.t('dashboard'),
       'influencer/campaigns':App.i18n.t('my_campaigns'),
       'influencer/wallet':   App.i18n.t('my_wallet'),
+      'client/dashboard':    'Client Dashboard',
+      'client/wallet':       'My Wallet Ledger',
     };
     $('#topbar-title').text(titles[route] || route);
   }
 
   function buildSidebar() {
-    var isAdmin = App.auth.isAdmin();
-    var user    = App.auth.getUser();
-    var navHtml = '';
+    var isAdmin    = App.auth.isAdmin();
+    var isClient   = App.auth.isClient();
+    var user       = App.auth.getUser();
+    var navHtml    = '';
 
     if (isAdmin) {
       navHtml = `
@@ -115,6 +137,9 @@ App.router = (function ($) {
         </a>
         <a class="nav-item" data-route="admin/influencers" href="#/admin/influencers">
           <span class="nav-icon">⭐</span><span data-i18n="influencers">${App.i18n.t('influencers')}</span>
+        </a>
+        <a class="nav-item" data-route="admin/clients" href="#/admin/clients">
+          <span class="nav-icon">🏢</span><span>Clients Portal</span>
         </a>
         <a class="nav-item" data-route="admin/products" href="#/admin/products">
           <span class="nav-icon">📦</span><span data-i18n="products">${App.i18n.t('products')}</span>
@@ -132,6 +157,16 @@ App.router = (function ($) {
         </a>
         <a class="nav-item" data-route="admin/wallet" href="#/admin/wallet">
           <span class="nav-icon">💰</span><span data-i18n="wallet">${App.i18n.t('wallet')}</span>
+        </a>
+      `;
+    } else if (isClient) {
+      navHtml = `
+        <div class="nav-section-label">Client Menu</div>
+        <a class="nav-item" data-route="client/dashboard" href="#/client/dashboard">
+          <span class="nav-icon">📊</span><span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-route="client/wallet" href="#/client/wallet">
+          <span class="nav-icon">💰</span><span>Wallet Ledger</span>
         </a>
       `;
     } else {
@@ -155,7 +190,11 @@ App.router = (function ($) {
     var initials = user.name.split(' ').map(function(p){return p[0];}).join('').substring(0,2).toUpperCase();
     $('#user-avatar-initials').text(initials);
     $('#user-display-name').text(user.name);
-    $('#user-role-badge').text(isAdmin ? 'Admin' : 'Influencer');
+    
+    var roleBadge = 'Influencer';
+    if (isAdmin) roleBadge = 'Admin';
+    else if (isClient) roleBadge = 'Client';
+    $('#user-role-badge').text(roleBadge);
 
     // Highlight current
     $('.nav-item[data-route="' + _current + '"]').addClass('active');
@@ -228,6 +267,9 @@ App.router = (function ($) {
       if (role === 'admin') {
         $('#login-email').val('admin@influx.com');
         $('#login-password').val('admin@123');
+      } else if (role === 'client') {
+        $('#login-email').val('client@influx.com');
+        $('#login-password').val('client@123');
       } else {
         $('#login-email').val('ajit.kumar@gmail.com');
         $('#login-password').val('inf@123');
@@ -255,7 +297,10 @@ App.router = (function ($) {
     App.api.auth.login({ email, password: pass })
       .done(function (res) {
         App.auth.setUser(res.data);
-        var route = res.data.role === 'admin' ? 'admin/dashboard' : 'influencer/dashboard';
+        var route = 'influencer/dashboard';
+        if (res.data.role === 'admin') route = 'admin/dashboard';
+        else if (res.data.role === 'client') route = 'client/dashboard';
+        
         Swal.fire({
           icon: 'success', title: 'Welcome back, ' + res.data.name + '! 👋',
           showConfirmButton: false, timer: 1200,

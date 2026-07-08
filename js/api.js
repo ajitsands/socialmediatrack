@@ -91,6 +91,27 @@ App.api = (function ($) {
     deleteBulk:   function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
   };
 
+  /* ── Clients ─────────────────────────────── */
+  var clients = {
+    list:          function ()  { return _request('clients', 'list', {}, 'GET'); },
+    get:           function (id){ return _request('clients', 'get', {id: id}, 'GET'); },
+    create:        function (d) { return _request('clients', 'create', d, 'POST'); },
+    update:        function (d) { return _request('clients', 'update', d, 'POST'); },
+    delete:        function (id){ return _request('clients', 'delete', {id: id}, 'POST'); },
+    toggleStatus:  function (id){ return _request('clients', 'toggle_status', {id: id}, 'POST'); },
+    ledger:        function (id){ return _request('clients', 'wallet_transactions', {client_id: id}, 'GET'); },
+    addFunds:      function (d) { return _request('clients', 'add_funds', d, 'POST'); },
+  };
+
+  /* ── Client Analytics (Portal) ───────────── */
+  var clientAnalytics = {
+    overview:      function ()     { return _request('client_analytics', 'overview', {}, 'GET'); },
+    byProduct:     function ()     { return _request('client_analytics', 'by_product', {}, 'GET'); },
+    byInfluencer:  function ()     { return _request('client_analytics', 'by_influencer', {}, 'GET'); },
+    visitorLeads:  function (pId)  { return _request('client_analytics', 'visitor_leads', {product_id: pId||0}, 'GET'); },
+    walletHistory: function ()     { return _request('client_analytics', 'wallet_history', {}, 'GET'); },
+  };
+
   /* ── Analytics ───────────────────────────── */
   var analytics = {
     overview:      function ()     { return _request('analytics', 'overview',      {}, 'GET'); },
@@ -136,6 +157,6 @@ App.api = (function ($) {
     return msg;
   }
 
-  return { auth, users, products, campaigns, analytics, points, wallet, landing, handleError };
+  return { auth, users, products, campaigns, analytics, points, wallet, landing, clients, clientAnalytics, handleError };
 
 }(jQuery));

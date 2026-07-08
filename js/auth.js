@@ -23,9 +23,10 @@ App.auth = (function ($) {
   }
 
   function getUser() { return _user; }
-  function isLoggedIn() { return !!_user; }
-  function isAdmin() { return _user && _user.role === 'admin'; }
-  function isInfluencer() { return _user && _user.role === 'influencer'; }
+  var isLoggedIn = function () { return !!_user; };
+  var isAdmin = function () { return _user && _user.role === 'admin'; };
+  var isInfluencer = function () { return _user && _user.role === 'influencer'; };
+  var isClient = function () { return _user && _user.role === 'client'; };
 
   function logout() {
     App.api.auth.logout().always(function () {
@@ -38,7 +39,10 @@ App.auth = (function ($) {
   function _updateHeader() {
     if (_user) {
       $('#user-display-name').text(_user.name);
-      $('#user-role-badge').text(_user.role === 'admin' ? 'Admin' : 'Influencer');
+      var badgeText = 'Influencer';
+      if (_user.role === 'admin') badgeText = 'Admin';
+      else if (_user.role === 'client') badgeText = 'Client';
+      $('#user-role-badge').text(badgeText);
       var initials = _user.name.split(' ').map(function (p) { return p[0]; }).join('').substring(0, 2).toUpperCase();
       $('#user-avatar-initials').text(initials);
     }
@@ -50,15 +54,20 @@ App.auth = (function ($) {
       return false;
     }
     if (role === 'admin' && !isAdmin()) {
-      App.router.go('influencer/dashboard');
+      var defaultRoute = isClient() ? 'client/dashboard' : 'influencer/dashboard';
+      App.router.go(defaultRoute);
       return false;
     }
     if (role === 'influencer' && !isInfluencer() && !isAdmin()) {
       App.router.go('login');
       return false;
     }
+    if (role === 'client' && !isClient() && !isAdmin()) {
+      App.router.go('login');
+      return false;
+    }
     return true;
   }
 
-  return { init, setUser, getUser, isLoggedIn, isAdmin, isInfluencer, logout, requireAuth };
+  return { init, setUser, getUser, isLoggedIn, isAdmin, isInfluencer, isClient, logout, requireAuth };
 }(jQuery));

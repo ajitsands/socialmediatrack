@@ -10,11 +10,12 @@ $input  = getInput();
 // ─── List Products ────────────────────────────
 if ($action === 'list') {
     $stmt = $db->query("
-        SELECT p.*,
+        SELECT p.*, u.name as client_name,
                COUNT(DISTINCT c.id) as campaign_count,
                COUNT(DISTINCT e.id) as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
         FROM products p
+        LEFT JOIN users u ON u.id = p.client_id
         LEFT JOIN campaigns c ON c.product_id = p.id
         LEFT JOIN events    e ON e.campaign_id = c.id
         GROUP BY p.id
@@ -26,7 +27,12 @@ if ($action === 'list') {
 // ─── Get Single Product ───────────────────────
 if ($action === 'get') {
     $id   = (int)param('id');
-    $stmt = $db->prepare("SELECT * FROM products WHERE id=?");
+    $stmt = $db->prepare("
+        SELECT p.*, u.name as client_name 
+        FROM products p 
+        LEFT JOIN users u ON u.id = p.client_id 
+        WHERE p.id=?
+    ");
     $stmt->execute([$id]);
     $prod = $stmt->fetch();
     if (!$prod) apiError('Product not found', 404);
@@ -35,47 +41,56 @@ if ($action === 'get') {
 
 // ─── Create Product ───────────────────────────
 if ($action === 'create') {
-    $name   = sanitize($input['name']   ?? '');
-    $cat    = sanitize($input['category']    ?? 'other');
-    $desc   = sanitize($input['description'] ?? '');
-    $price  = (float)($input['price']  ?? 0);
-    $curr   = sanitize($input['currency']    ?? 'BHD');
-    $imgUrl = trim($input['image_url']   ?? '');
-    $pUrl   = trim($input['product_url'] ?? '');
-    $dUrl   = trim($input['demo_url']    ?? '');
-    $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $name     = sanitize($input['name']   ?? '');
+    $cat      = sanitize($input['category']    ?? 'other');
+    $desc     = sanitize($input['description'] ?? '');
+    $price    = (float)($input['price']  ?? 0);
+    $cpcRate  = (float)($input['cpc_rate'] ?? 0);
+    $cplRate  = (float)($input['cpl_rate'] ?? 0);
+    $clientId = !empty($input['client_id']) ? (int)$input['client_id'] : null;
+    $curr     = sanitize($input['currency']    ?? 'BHD');
+    $imgUrl   = trim($input['image_url']   ?? '');
+    $pUrl     = trim($input['product_url'] ?? '');
+    $dUrl     = trim($input['demo_url']    ?? '');
+    $status   = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
 
     if (!$name)  apiError('Product name is required.');
     if ($price < 0) apiError('Price cannot be negative.');
+    if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
 
-    $stmt = $db->prepare("INSERT INTO products (name,category,description,price,currency,image_url,product_url,demo_url,status) VALUES (?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([$name,$cat,$desc,$price,$curr,$imgUrl,$pUrl,$dUrl,$status]);
+    $stmt = $db->prepare("INSERT INTO products (client_id,name,category,description,price,cpc_rate,cpl_rate,currency,image_url,product_url,demo_url,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status]);
     $newId = $db->lastInsertId();
 
-    $get = $db->prepare("SELECT * FROM products WHERE id=?");
+    $get = $db->prepare("SELECT p.*, u.name as client_name FROM products p LEFT JOIN users u ON u.id=p.client_id WHERE p.id=?");
     $get->execute([$newId]);
     apiSuccess($get->fetch(), 'Product created successfully');
 }
 
 // ─── Update Product ───────────────────────────
 if ($action === 'update') {
-    $id     = (int)($input['id'] ?? 0);
-    $name   = sanitize($input['name']   ?? '');
-    $cat    = sanitize($input['category']    ?? 'other');
-    $desc   = sanitize($input['description'] ?? '');
-    $price  = (float)($input['price']  ?? 0);
-    $curr   = sanitize($input['currency']    ?? 'BHD');
-    $imgUrl = trim($input['image_url']   ?? '');
-    $pUrl   = trim($input['product_url'] ?? '');
-    $dUrl   = trim($input['demo_url']    ?? '');
-    $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $id       = (int)($input['id'] ?? 0);
+    $name     = sanitize($input['name']   ?? '');
+    $cat      = sanitize($input['category']    ?? 'other');
+    $desc     = sanitize($input['description'] ?? '');
+    $price    = (float)($input['price']  ?? 0);
+    $cpcRate  = (float)($input['cpc_rate'] ?? 0);
+    $cplRate  = (float)($input['cpl_rate'] ?? 0);
+    $clientId = !empty($input['client_id']) ? (int)$input['client_id'] : null;
+    $curr     = sanitize($input['currency']    ?? 'BHD');
+    $imgUrl   = trim($input['image_url']   ?? '');
+    $pUrl     = trim($input['product_url'] ?? '');
+    $dUrl     = trim($input['demo_url']    ?? '');
+    $status   = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
 
     if (!$id || !$name) apiError('ID and Name are required.');
+    if ($price < 0) apiError('Price cannot be negative.');
+    if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
 
-    $stmt = $db->prepare("UPDATE products SET name=?,category=?,description=?,price=?,currency=?,image_url=?,product_url=?,demo_url=?,status=? WHERE id=?");
-    $stmt->execute([$name,$cat,$desc,$price,$curr,$imgUrl,$pUrl,$dUrl,$status,$id]);
+    $stmt = $db->prepare("UPDATE products SET client_id=?,name=?,category=?,description=?,price=?,cpc_rate=?,cpl_rate=?,currency=?,image_url=?,product_url=?,demo_url=?,status=? WHERE id=?");
+    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status,$id]);
 
-    $get = $db->prepare("SELECT * FROM products WHERE id=?");
+    $get = $db->prepare("SELECT p.*, u.name as client_name FROM products p LEFT JOIN users u ON u.id=p.client_id WHERE p.id=?");
     $get->execute([$id]);
     apiSuccess($get->fetch(), 'Product updated successfully');
 }
