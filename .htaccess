@@ -2,9 +2,6 @@
 # ServerSignature Off
 
 
-# ─── PHP Version ─────────────────────────────
-# Force PHP 8.2 (cPanel) — ensures PDO/pdo_mysql extension is available
-AddHandler application/x-httpd-php82 .php
 
 # ─── PHP Settings ────────────────────────────
 # Managed inside config.php dynamically
