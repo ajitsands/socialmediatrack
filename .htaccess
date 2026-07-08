@@ -3,6 +3,10 @@
 
 
 
+# ─── PHP Version ─────────────────────────────
+# Use EasyApache 4 PHP 8.2 (ea-php82) — has PDO/pdo_mysql enabled by default
+AddHandler application/x-httpd-ea-php82 .php
+
 # ─── PHP Settings ────────────────────────────
 # Managed inside config.php dynamically
 
