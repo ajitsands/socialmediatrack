@@ -8,9 +8,19 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/crypto.php';
 
-$db     = getDB();
 $action = param('action', 'info');
 $input  = getInput();
+
+// Helper: parse ref from GET or raw QUERY_STRING (server compat)
+function getRef(): string {
+    if (!empty($_GET['ref'])) return $_GET['ref'];
+    // Fallback: parse raw QUERY_STRING manually (some server configs strip $_GET)
+    $qs = $_SERVER['QUERY_STRING'] ?? '';
+    if ($qs && preg_match('/(?:^|&)ref=([^&]+)/', $qs, $m)) {
+        return urldecode($m[1]);
+    }
+    return '';
+}
 
 // Helper: get IP hash
 function getIpHash(): string {
@@ -23,9 +33,15 @@ function getIpHash(): string {
 
 // ─── Get Campaign Info from ref token ─────────
 if ($action === 'info') {
-    $ref = param('ref', '');
+    $ref = getRef();
     if (!$ref) apiError('Invalid link — missing reference token.', 400);
 
+    // Check openssl is available
+    if (!function_exists('openssl_decrypt')) {
+        apiError('Server configuration error: encryption extension not available. Please contact support.', 500);
+    }
+
+    $db   = getDB();
     $data = decryptToken($ref);
     if (!$data || empty($data['campaign_id'])) {
         apiError('Invalid or expired tracking link.', 400);
@@ -74,6 +90,7 @@ if ($action === 'click') {
     $ipHash = getIpHash();
     $ua     = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
 
+    $db = getDB();
     $stmt = $db->prepare("INSERT INTO events (campaign_id, type, ip_hash, user_agent) VALUES (?, 'click', ?, ?)");
     $stmt->execute([$campaignId, $ipHash, $ua]);
 
@@ -99,6 +116,7 @@ if ($action === 'convert') {
     $campaignId = (int)$data['campaign_id'];
 
     // Get campaign to return redirect URL
+    $db   = getDB();
     $stmt = $db->prepare("SELECT c.offer_code, c.discount_value, c.discount_type, p.product_url, p.demo_url FROM campaigns c JOIN products p ON p.id=c.product_id WHERE c.id=? AND c.status='active'");
     $stmt->execute([$campaignId]);
     $camp = $stmt->fetch();
@@ -154,6 +172,7 @@ if ($action === 'skip') {
 
     $campaignId = (int)$data['campaign_id'];
 
+    $db   = getDB();
     $stmt = $db->prepare("SELECT p.product_url, p.demo_url FROM campaigns c JOIN products p ON p.id=c.product_id WHERE c.id=?");
     $stmt->execute([$campaignId]);
     $camp = $stmt->fetch();
