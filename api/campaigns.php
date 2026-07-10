@@ -13,6 +13,19 @@ if ($action === 'list') {
     $sess = $_SESSION;
     $where = $sess['role'] === 'admin' ? '' : 'AND c.influencer_id = ' . (int)$sess['user_id'];
 
+    $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch() ?: [
+        'conversions_per_point' => 100,
+        'value_per_point' => 1.000,
+        'clicks_per_point' => 1000,
+        'click_value_per_point' => 1.000,
+        'currency' => 'BHD'
+    ];
+    $cpp = (int)$cfg['conversions_per_point'];
+    $vpp = (float)$cfg['value_per_point'];
+    $cl_cpp = (int)$cfg['clicks_per_point'];
+    $cl_vpp = (float)$cfg['click_value_per_point'];
+    $curr = $cfg['currency'] ?: 'BHD';
+
     $stmt = $db->query("
         SELECT c.*,
                p.name as product_name, p.category as product_category,
@@ -30,7 +43,18 @@ if ($action === 'list') {
         GROUP BY c.id
         ORDER BY c.created_at DESC
     ");
-    apiSuccess($stmt->fetchAll());
+    $campaigns = $stmt->fetchAll();
+    foreach ($campaigns as &$c) {
+        $total_clicks = (int)$c['total_clicks'];
+        $total_conversions = (int)$c['total_conversions'];
+
+        $conv_pts = $cpp > 0 ? floor($total_conversions / $cpp) : 0;
+        $click_pts = $cl_cpp > 0 ? floor($total_clicks / $cl_cpp) : 0;
+        
+        $c['earned_amount'] = round(($conv_pts * $vpp) + ($click_pts * $cl_vpp), 3);
+        $c['currency'] = $curr;
+    }
+    apiSuccess($campaigns);
 }
 
 // ─── Get Single Campaign ──────────────────────

@@ -209,7 +209,7 @@ App.Influencer.Campaigns = (function ($) {
           <div class="table-wrapper" style="padding:16px">
             <table id="tbl-my-campaigns" class="dataTable" style="width:100%">
               <thead>
-                <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Status</th><th>Link</th></tr>
+                <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Earned</th><th>Status</th><th>Link</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -246,6 +246,10 @@ App.Influencer.Campaigns = (function ($) {
           { data: null, render: function(d,t,r){
               var rate = r.total_clicks>0?((r.total_conversions/r.total_clicks)*100).toFixed(1):0;
               return `<span style="font-weight:700;color:${rate>=10?'var(--success)':rate>=5?'var(--warning)':'var(--danger)'}">${rate}%</span>`;
+            }
+          },
+          { data: 'earned_amount', render: function(d,t,r){
+              return `<strong style="color:#22C55E">${parseFloat(d || 0).toFixed(3)} ${r.currency || 'BHD'}</strong>`;
             }
           },
           { data: 'status', render: function(d,t,r){
@@ -300,11 +304,11 @@ App.Influencer.Campaigns = (function ($) {
     var val = $(this).val();
     if (!_dt) return;
     if (val === 'all') {
-      _dt.column(8).search('').draw();
+      _dt.column(9).search('').draw();
     } else if (val === 'active') {
-      _dt.column(8).search('Running').draw();
+      _dt.column(9).search('Running').draw();
     } else if (val === 'paused') {
-      _dt.column(8).search('Not Running').draw();
+      _dt.column(9).search('Not Running').draw();
     }
   });
 
