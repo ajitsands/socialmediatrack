@@ -62,9 +62,9 @@ App.Influencer.Wallet = (function ($) {
               <thead>
                 <tr>
                   <th>Date & Time</th>
-                  <th>Points Deducted</th>
-                  <th>Payout Amount</th>
                   <th>Type</th>
+                  <th>Points Impact</th>
+                  <th>Amount</th>
                   <th>Status</th>
                   <th>Note / Details</th>
                 </tr>
@@ -102,22 +102,31 @@ App.Influencer.Wallet = (function ($) {
         items.forEach(function (t) {
           var pts = t.points ? parseFloat(t.points).toFixed(2) : '0.00';
           var amt = t.amount ? parseFloat(t.amount).toFixed(3) : '0.000';
+          
+          var ptsPrefix = t.type === 'credit' ? '+' : '-';
+          var ptsColor = t.type === 'credit' ? '#22C55E' : '#EF4444';
+          var ptsDisplay = `<span style="font-weight:600;color:${ptsColor}">${ptsPrefix}${pts} pts</span>`;
+
+          var amtPrefix = t.type === 'credit' ? '+' : '-';
+          var amtColor = t.type === 'credit' ? '#22C55E' : '#EF4444';
+          var amtDisplay = `<strong style="color:${amtColor}">${amtPrefix}${amt} BHD</strong>`;
+
           var typeBadge = t.type === 'credit' 
-            ? '<span class="badge" style="background:rgba(34,197,94,0.1);color:#22C55E">Credit</span>'
-            : '<span class="badge" style="background:rgba(239,68,68,0.1);color:#EF4444">Debit</span>';
+            ? '<span class="badge" style="background:#D1FAE5;color:#22C55E;font-size:0.75rem;padding:3px 8px;border-radius:6px">CREDIT</span>'
+            : '<span class="badge" style="background:#FEE2E2;color:#EF4444;font-size:0.75rem;padding:3px 8px;border-radius:6px">DEBIT</span>';
           
           var statusBadge = t.status === 'paid'
-            ? '<span class="badge" style="background:#22C55E;color:#fff">Paid</span>'
-            : '<span class="badge" style="background:#F59E0B;color:#fff">Pending</span>';
+            ? '<span class="badge" style="background:#22C55E;color:#fff;font-size:0.75rem;padding:3px 8px;border-radius:6px">Paid</span>'
+            : '<span class="badge" style="background:#F59E0B;color:#fff;font-size:0.75rem;padding:3px 8px;border-radius:6px">Pending</span>';
 
           var date = new Date(t.created_at).toLocaleString();
 
           tbody += `
             <tr>
               <td>${date}</td>
-              <td style="font-weight:600">${pts}</td>
-              <td style="font-weight:700;color:var(--primary)">${amt} BHD</td>
               <td>${typeBadge}</td>
+              <td>${ptsDisplay}</td>
+              <td>${amtDisplay}</td>
               <td>${statusBadge}</td>
               <td style="color:var(--text-muted);font-size:0.88rem">${t.note || '—'}</td>
             </tr>

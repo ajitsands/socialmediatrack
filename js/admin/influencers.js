@@ -135,6 +135,13 @@ App.Admin.Influencers = (function ($) {
                     <option value="inactive">❌ Inactive</option>
                   </select>
                 </div>
+                <div class="form-group" style="margin-top:16px">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-weight:600;color:var(--text)">
+                    <input type="checkbox" id="inf-profile-locked" style="width:18px;height:18px;accent-color:var(--primary)">
+                    <span>🔒 Lock Name/Details (Verified)</span>
+                  </label>
+                  <p class="form-helper" style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 0 26px">When checked, the influencer cannot modify their full name in settings.</p>
+                </div>
               </form>
             </div>
             <div class="modal-footer">
@@ -301,6 +308,7 @@ App.Admin.Influencers = (function ($) {
       renderCategoryCheckboxes([]); // Clear selected categories
       $('#pass-req').show(); $('#pass-hint').hide();
       App.countries.renderSelect('inf-country-code', '+973');
+      $('#inf-profile-locked').prop('checked', false);
       $('#modal-influencer').show();
     });
 
@@ -320,6 +328,7 @@ App.Admin.Influencers = (function ($) {
         $('#inf-password').val('');
         $('#pass-req').hide(); $('#pass-hint').show();
         App.countries.renderSelect('inf-country-code', r.country_code || '+973');
+        $('#inf-profile-locked').prop('checked', parseInt(r.profile_locked) === 1);
 
         // Populate categories
         renderCategoryCheckboxes(r.categories || []);
@@ -368,7 +377,8 @@ App.Admin.Influencers = (function ($) {
         country_code: $('#inf-country-code').val(),
         status:       $('#inf-status').val(),
         platforms:    platformsList,
-        categories:   categoriesList
+        categories:   categoriesList,
+        profile_locked: $('#inf-profile-locked').is(':checked') ? 1 : 0
       };
 
       var action = data.id ? App.api.users.update(data) : App.api.users.create(data);

@@ -119,6 +119,9 @@ try {
     }
     // Modify ENUM role definition to include 'client'
     run($db, "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('admin','influencer','client') DEFAULT 'influencer'", "Migration: Update user role ENUM to support client", $log, $errors);
+    if (!in_array('profile_locked', $cols)) {
+        run($db, "ALTER TABLE `users` ADD COLUMN `profile_locked` TINYINT(1) DEFAULT 0 AFTER `avatar`", "Migration: Add profile_locked column to users table", $log, $errors);
+    }
 } catch (Exception $e) {}
 
 // Migration: products client columns

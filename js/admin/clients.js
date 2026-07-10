@@ -120,6 +120,13 @@ App.Admin.Clients = (function ($) {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
+                <div class="form-group" style="margin-top:16px">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-weight:600;color:var(--text)">
+                    <input type="checkbox" id="client-profile-locked" style="width:18px;height:18px;accent-color:var(--primary)">
+                    <span>🔒 Lock Name/Details (Verified)</span>
+                  </label>
+                  <p class="form-helper" style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 0 26px">When checked, the vendor/client cannot modify their company name.</p>
+                </div>
                 <div class="modal-footer" style="padding-top:16px">
                   <button type="button" class="btn btn-secondary" id="btn-cancel-client">Cancel</button>
                   <button type="submit" class="btn btn-primary">Save Client</button>
@@ -282,6 +289,7 @@ App.Admin.Clients = (function ($) {
       $('#modal-client-title').text('🏢 Add New Client Account');
       $('#client-pass-req').show();
       $('#client-password').prop('required', true);
+      $('#client-profile-locked').prop('checked', false);
       $('#modal-client').show();
     });
 
@@ -298,13 +306,14 @@ App.Admin.Clients = (function ($) {
     $('#form-client').on('submit', function (e) {
       e.preventDefault();
       var data = {
-        id:           _editId,
-        name:         $('#client-name').val().trim(),
-        email:        $('#client-email').val().trim(),
-        password:     $('#client-password').val(),
-        phone:        $('#client-phone').val().trim(),
-        country_code: $('#client-country-code').val(),
-        status:       $('#client-status').val(),
+        id:             _editId,
+        name:           $('#client-name').val().trim(),
+        email:          $('#client-email').val().trim(),
+        password:       $('#client-password').val(),
+        phone:          $('#client-phone').val().trim(),
+        country_code:   $('#client-country-code').val(),
+        status:         $('#client-status').val(),
+        profile_locked: $('#client-profile-locked').is(':checked') ? 1 : 0
       };
 
       var actionPromise = _editId 
@@ -338,6 +347,7 @@ App.Admin.Clients = (function ($) {
           $('#client-phone').val(c.phone || '');
           $('#client-country-code').val(c.country_code || '+973');
           $('#client-status').val(c.status);
+          $('#client-profile-locked').prop('checked', parseInt(c.profile_locked) === 1);
 
           $('#modal-client-title').text('✏️ Edit Client: ' + c.name);
           $('#modal-client').show();

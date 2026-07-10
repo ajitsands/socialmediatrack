@@ -11,7 +11,7 @@ $input  = getInput();
 if ($action === 'list') {
     $stmt = $db->query("
         SELECT u.id, u.name, u.email, u.phone, u.country_code,
-               u.status, u.created_at,
+               u.status, u.created_at, u.profile_locked,
                COUNT(DISTINCT c.id) as total_campaigns,
                COUNT(DISTINCT e.id) as total_conversions,
                GROUP_CONCAT(DISTINCT CONCAT(up.platform, ':', IFNULL(up.social_handle, '')) SEPARATOR ',') as platforms_list,
@@ -23,7 +23,7 @@ if ($action === 'list') {
         LEFT JOIN campaigns c ON c.influencer_id = u.id
         LEFT JOIN events e    ON e.campaign_id   = c.id AND e.type = 'conversion'
         WHERE u.role = 'influencer'
-        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.status, u.created_at
+        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.status, u.profile_locked, u.created_at
         ORDER BY u.created_at DESC
     ");
     apiSuccess($stmt->fetchAll());
@@ -32,7 +32,7 @@ if ($action === 'list') {
 // ─── Get Single Influencer ────────────────────
 if ($action === 'get') {
     $id   = (int)param('id');
-    $stmt = $db->prepare("SELECT id,name,email,phone,country_code,status,created_at FROM users WHERE id=? AND role='influencer'");
+    $stmt = $db->prepare("SELECT id,name,email,phone,country_code,status,profile_locked,created_at FROM users WHERE id=? AND role='influencer'");
     $stmt->execute([$id]);
     $user = $stmt->fetch();
     if (!$user) apiError('Influencer not found', 404);
@@ -74,9 +74,10 @@ if ($action === 'create') {
     // Use primary platform (first platform from array) for standard fields fallback
     $primaryPlat = isset($plats[0]) ? sanitize($plats[0]['platform']) : 'instagram';
     $primaryHand = isset($plats[0]) ? sanitize($plats[0]['handle']) : '';
+    $profileLocked = isset($input['profile_locked']) ? (int)$input['profile_locked'] : 0;
 
-    $stmt = $db->prepare("INSERT INTO users (name,email,password,role,phone,country_code,social_handle,platform,status) VALUES (?,?,?,'influencer',?,?,?,?,?)");
-    $stmt->execute([$name, $email, password_hash($pass, PASSWORD_BCRYPT), $phone, $cc, $primaryHand, $primaryPlat, $status]);
+    $stmt = $db->prepare("INSERT INTO users (name,email,password,role,phone,country_code,social_handle,platform,status,profile_locked) VALUES (?,?,?,'influencer',?,?,?,?,?,?)");
+    $stmt->execute([$name, $email, password_hash($pass, PASSWORD_BCRYPT), $phone, $cc, $primaryHand, $primaryPlat, $status, $profileLocked]);
     $newId = $db->lastInsertId();
 
     // Insert all platforms
@@ -99,7 +100,7 @@ if ($action === 'create') {
         }
     }
 
-    $get = $db->prepare("SELECT id,name,email,phone,country_code,status,created_at FROM users WHERE id=?");
+    $get = $db->prepare("SELECT id,name,email,phone,country_code,status,profile_locked,created_at FROM users WHERE id=?");
     $get->execute([$newId]);
     $user = $get->fetch();
     apiSuccess($user, 'Influencer created successfully');
@@ -115,6 +116,7 @@ if ($action === 'update') {
     $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
     $plats  = $input['platforms']       ?? [];
     $cats   = $input['categories']      ?? [];
+    $profileLocked = isset($input['profile_locked']) ? (int)$input['profile_locked'] : 0;
 
     if (!$id)    apiError('ID is required.');
     if (!$name)  apiError('Name is required.');
@@ -129,14 +131,14 @@ if ($action === 'update') {
     $primaryPlat = isset($plats[0]) ? sanitize($plats[0]['platform']) : 'instagram';
     $primaryHand = isset($plats[0]) ? sanitize($plats[0]['handle']) : '';
 
-    $sql = "UPDATE users SET name=?,email=?,phone=?,country_code=?,social_handle=?,platform=?,status=? WHERE id=? AND role='influencer'";
+    $sql = "UPDATE users SET name=?,email=?,phone=?,country_code=?,social_handle=?,platform=?,status=?,profile_locked=? WHERE id=? AND role='influencer'";
     if (!empty($input['password']) && strlen($input['password']) >= 6) {
-        $sql = "UPDATE users SET name=?,email=?,phone=?,country_code=?,social_handle=?,platform=?,status=?,password=? WHERE id=? AND role='influencer'";
+        $sql = "UPDATE users SET name=?,email=?,phone=?,country_code=?,social_handle=?,platform=?,status=?,profile_locked=?,password=? WHERE id=? AND role='influencer'";
         $stmt = $db->prepare($sql);
-        $stmt->execute([$name,$email,$phone,$cc,$primaryHand,$primaryPlat,$status,password_hash($input['password'],PASSWORD_BCRYPT),$id]);
+        $stmt->execute([$name,$email,$phone,$cc,$primaryHand,$primaryPlat,$status,$profileLocked,password_hash($input['password'],PASSWORD_BCRYPT),$id]);
     } else {
         $stmt = $db->prepare($sql);
-        $stmt->execute([$name,$email,$phone,$cc,$primaryHand,$primaryPlat,$status,$id]);
+        $stmt->execute([$name,$email,$phone,$cc,$primaryHand,$primaryPlat,$status,$profileLocked,$id]);
     }
 
     // Refresh platforms
@@ -161,7 +163,7 @@ if ($action === 'update') {
         }
     }
 
-    $get = $db->prepare("SELECT id,name,email,phone,country_code,status,created_at FROM users WHERE id=?");
+    $get = $db->prepare("SELECT id,name,email,phone,country_code,status,profile_locked,created_at FROM users WHERE id=?");
     $get->execute([$id]);
     $user = $get->fetch();
     apiSuccess($user, 'Influencer updated successfully');

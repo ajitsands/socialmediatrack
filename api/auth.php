@@ -40,7 +40,7 @@ if ($action === 'logout') {
 if ($action === 'me') {
     requireAuth();
     $db   = getDB();
-    $stmt = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,created_at FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user) apiError('User not found', 404);
@@ -61,6 +61,15 @@ if ($action === 'update_profile') {
 
     $db = getDB();
     $userId = $_SESSION['user_id'];
+
+    // Check if profile details are verified/locked by admin
+    $stmtLock = $db->prepare("SELECT profile_locked, name FROM users WHERE id = ?");
+    $stmtLock->execute([$userId]);
+    $lockInfo = $stmtLock->fetch();
+    if ($lockInfo && (int)$lockInfo['profile_locked'] === 1) {
+        // Enforce lock: ignore requested name change, preserve the verified database name
+        $name = $lockInfo['name'];
+    }
 
     // Handle avatar base64
     $avatarPath = null;
@@ -97,7 +106,7 @@ if ($action === 'update_profile') {
     $stmt->execute($params);
 
     // Refresh user details to return
-    $get = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,created_at FROM users WHERE id = ?");
+    $get = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at FROM users WHERE id = ?");
     $get->execute([$userId]);
     $user = $get->fetch();
 

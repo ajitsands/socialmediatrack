@@ -10,12 +10,12 @@ $input  = getInput();
 // ─── List Clients ─────────────────────────────
 if ($action === 'list') {
     $stmt = $db->query("
-        SELECT u.id, u.name, u.email, u.phone, u.country_code, u.wallet_balance, u.status, u.created_at,
+        SELECT u.id, u.name, u.email, u.phone, u.country_code, u.wallet_balance, u.status, u.profile_locked, u.created_at,
                COUNT(p.id) as total_products
         FROM users u
         LEFT JOIN products p ON p.client_id = u.id
         WHERE u.role = 'client'
-        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.wallet_balance, u.status, u.created_at
+        GROUP BY u.id, u.name, u.email, u.phone, u.country_code, u.wallet_balance, u.status, u.profile_locked, u.created_at
         ORDER BY u.created_at DESC
     ");
     apiSuccess($stmt->fetchAll());
@@ -24,7 +24,7 @@ if ($action === 'list') {
 // ─── Get Single Client ────────────────────────
 if ($action === 'get') {
     $id   = (int)param('id');
-    $stmt = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status, created_at FROM users WHERE id = ? AND role = 'client'");
+    $stmt = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status, profile_locked, created_at FROM users WHERE id = ? AND role = 'client'");
     $stmt->execute([$id]);
     $client = $stmt->fetch();
     if (!$client) apiError('Client not found', 404);
@@ -39,6 +39,7 @@ if ($action === 'create') {
     $phone  = sanitize($input['phone'] ?? '');
     $cc     = sanitize($input['country_code'] ?? '+973');
     $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $profileLocked = isset($input['profile_locked']) ? (int)$input['profile_locked'] : 0;
 
     if (!$name)  apiError('Name is required.');
     if (!$email) apiError('Email is required.');
@@ -50,12 +51,12 @@ if ($action === 'create') {
     $chk->execute([$email]);
     if ($chk->fetch()) apiError('Email already registered.');
 
-    $stmt = $db->prepare("INSERT INTO users (name, email, password, role, phone, country_code, wallet_balance, status) VALUES (?, ?, ?, 'client', ?, ?, 0.000, ?)");
-    $stmt->execute([$name, $email, password_hash($pass, PASSWORD_BCRYPT), $phone, $cc, $status]);
+    $stmt = $db->prepare("INSERT INTO users (name, email, password, role, phone, country_code, wallet_balance, status, profile_locked) VALUES (?, ?, ?, 'client', ?, ?, 0.000, ?, ?)");
+    $stmt->execute([$name, $email, password_hash($pass, PASSWORD_BCRYPT), $phone, $cc, $status, $profileLocked]);
     $newId = $db->lastInsertId();
 
     // Load created user
-    $get = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status, created_at FROM users WHERE id = ?");
+    $get = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status, profile_locked, created_at FROM users WHERE id = ?");
     $get->execute([$newId]);
     apiSuccess($get->fetch(), 'Client created successfully');
 }
@@ -68,6 +69,7 @@ if ($action === 'update') {
     $phone  = sanitize($input['phone'] ?? '');
     $cc     = sanitize($input['country_code'] ?? '+973');
     $status = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $profileLocked = isset($input['profile_locked']) ? (int)$input['profile_locked'] : 0;
 
     if (!$id)    apiError('ID is required.');
     if (!$name)  apiError('Name is required.');
@@ -78,17 +80,17 @@ if ($action === 'update') {
     $chk->execute([$email, $id]);
     if ($chk->fetch()) apiError('Email already registered by another user.');
 
-    $sql = "UPDATE users SET name = ?, email = ?, phone = ?, country_code = ?, status = ? WHERE id = ? AND role = 'client'";
+    $sql = "UPDATE users SET name = ?, email = ?, phone = ?, country_code = ?, status = ?, profile_locked = ? WHERE id = ? AND role = 'client'";
     if (!empty($input['password']) && strlen($input['password']) >= 6) {
-        $sql = "UPDATE users SET name = ?, email = ?, phone = ?, country_code = ?, status = ?, password = ? WHERE id = ? AND role = 'client'";
+        $sql = "UPDATE users SET name = ?, email = ?, phone = ?, country_code = ?, status = ?, profile_locked = ?, password = ? WHERE id = ? AND role = 'client'";
         $stmt = $db->prepare($sql);
-        $stmt->execute([$name, $email, $phone, $cc, $status, password_hash($input['password'], PASSWORD_BCRYPT), $id]);
+        $stmt->execute([$name, $email, $phone, $cc, $status, $profileLocked, password_hash($input['password'], PASSWORD_BCRYPT), $id]);
     } else {
         $stmt = $db->prepare($sql);
-        $stmt->execute([$name, $email, $phone, $cc, $status, $id]);
+        $stmt->execute([$name, $email, $phone, $cc, $status, $profileLocked, $id]);
     }
 
-    $get = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status FROM users WHERE id = ?");
+    $get = $db->prepare("SELECT id, name, email, phone, country_code, wallet_balance, status, profile_locked FROM users WHERE id = ?");
     $get->execute([$id]);
     apiSuccess($get->fetch(), 'Client updated successfully');
 }

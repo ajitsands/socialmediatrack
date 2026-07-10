@@ -99,7 +99,7 @@ App.Influencer.Profile = (function ($) {
             </div>
 
             <div class="form-group" style="margin-bottom:16px">
-              <label class="form-label">Full Name <span class="req">*</span></label>
+              <label class="form-label">Full Name <span class="req">*</span> <span id="profile-name-locked-badge" style="display:none;font-size:0.75rem;color:#22C55E;font-weight:600;margin-left:8px">🔒 Verified (Locked)</span></label>
               <input type="text" class="form-control" id="profile-name" required placeholder="Your full name" style="width:100%">
             </div>
 
@@ -201,6 +201,20 @@ App.Influencer.Profile = (function ($) {
         $('#profile-phone').val(user.phone || '');
         $('#profile-platform').val(user.platform || 'instagram');
         $('#profile-social-handle').val(user.social_handle || '');
+
+        if (parseInt(user.profile_locked) === 1) {
+          $('#profile-name').prop('disabled', true).css({
+            'background': 'var(--border-light)',
+            'cursor': 'not-allowed'
+          });
+          $('#profile-name-locked-badge').show();
+        } else {
+          $('#profile-name').prop('disabled', false).css({
+            'background': '',
+            'cursor': ''
+          });
+          $('#profile-name-locked-badge').hide();
+        }
       })
       .fail(App.api.handleError);
   }
