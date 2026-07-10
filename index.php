@@ -18,6 +18,7 @@ header("Pragma: no-cache");
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
@@ -144,6 +145,9 @@ header("Pragma: no-cache");
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<!-- Cropper.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -165,6 +169,8 @@ header("Pragma: no-cache");
 
 <!-- Influencer modules -->
 <script src="js/influencer/dashboard.js?v=1.1.8"></script>
+<script src="js/influencer/wallet.js?v=1.1.8"></script>
+<script src="js/influencer/profile.js?v=1.1.8"></script>
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.1.8"></script>

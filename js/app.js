@@ -22,6 +22,7 @@ App.router = (function ($) {
     'influencer/dashboard':function(){ App.Influencer.Dashboard.init(); },
     'influencer/campaigns':function(){ App.Influencer.Campaigns.init(); },
     'influencer/wallet':   function(){ App.Influencer.Wallet.init(); },
+    'influencer/profile':  function(){ App.Influencer.Profile.init(); },
     'client/dashboard':    function(){ App.Client.Dashboard.init(); },
     'client/wallet':       function(){ App.Client.Wallet.init(); },
     'client/crm':          function(){ App.Client.Crm.init(); },
@@ -123,6 +124,7 @@ App.router = (function ($) {
       'influencer/dashboard':App.i18n.t('dashboard'),
       'influencer/campaigns':App.i18n.t('my_campaigns'),
       'influencer/wallet':   App.i18n.t('my_wallet'),
+      'influencer/profile':  'Profile Settings',
       'client/dashboard':    'Client Dashboard',
       'client/wallet':       'My Wallet Ledger',
       'client/crm':          'Important Leads CRM',
@@ -190,6 +192,9 @@ App.router = (function ($) {
         </a>
         <a class="nav-item" data-route="influencer/wallet" href="#/influencer/wallet">
           <span class="nav-icon">💰</span><span data-i18n="my_wallet">${App.i18n.t('my_wallet')}</span>
+        </a>
+        <a class="nav-item" data-route="influencer/profile" href="#/influencer/profile">
+          <span class="nav-icon">👤</span><span>Profile Settings</span>
         </a>
       `;
     }

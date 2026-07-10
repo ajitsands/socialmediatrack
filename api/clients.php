@@ -116,16 +116,25 @@ if ($action === 'delete') {
 
 // ─── Ledger Transactions List ────────────────
 if ($action === 'wallet_transactions') {
-    $clientId = (int)param('client_id');
-    if (!$clientId) apiError('Client ID required.');
+    $clientId = (int)param('client_id', 0);
 
-    $stmt = $db->prepare("
-        SELECT id, amount, type, payment_method, note, created_at
-        FROM client_wallet_transactions
-        WHERE client_id = ?
-        ORDER BY created_at DESC
-    ");
-    $stmt->execute([$clientId]);
+    if ($clientId) {
+        $stmt = $db->prepare("
+            SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
+            FROM client_wallet_transactions wt
+            JOIN users u ON u.id = wt.client_id
+            WHERE wt.client_id = ?
+            ORDER BY wt.created_at DESC
+        ");
+        $stmt->execute([$clientId]);
+    } else {
+        $stmt = $db->query("
+            SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
+            FROM client_wallet_transactions wt
+            JOIN users u ON u.id = wt.client_id
+            ORDER BY wt.created_at DESC
+        ");
+    }
     apiSuccess($stmt->fetchAll());
 }
 

@@ -57,6 +57,8 @@ App.api = (function ($) {
     login:  function (d) { return _request('auth', 'login',  d, 'POST'); },
     logout: function ()  { return _request('auth', 'logout', {}, 'POST'); },
     me:     function ()  { return _request('auth', 'me',     {}, 'GET'); },
+    updateProfile: function (d) { return _request('auth', 'update_profile', d, 'POST'); },
+    changePassword: function (d) { return _request('auth', 'change_password', d, 'POST'); },
   };
 
   /* ── Users / Influencers ─────────────────── */
