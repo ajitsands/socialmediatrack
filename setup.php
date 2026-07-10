@@ -165,11 +165,40 @@ run($db, "
 CREATE TABLE IF NOT EXISTS `points_config` (
   `id`                   INT AUTO_INCREMENT PRIMARY KEY,
   `conversions_per_point` INT  DEFAULT 100,
+  `clicks_per_point`     INT  DEFAULT 1000,
+  `click_value_per_point` DECIMAL(10,3) DEFAULT 1.000,
+  `vendor_clicks_per_point` INT DEFAULT 1000,
+  `vendor_click_value_per_point` DECIMAL(10,3) DEFAULT 1.000,
+  `vendor_conversions_per_point` INT DEFAULT 100,
+  `vendor_conversion_value_per_point` DECIMAL(10,3) DEFAULT 2.000,
   `value_per_point`      DECIMAL(10,3) DEFAULT 1.000,
   `currency`             VARCHAR(10) DEFAULT 'BHD',
   `updated_at`           TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: points_config", $log, $errors);
+
+// Migration: points_config table columns
+try {
+    $pcCols = $db->query("DESCRIBE `points_config`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('clicks_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `clicks_per_point` INT DEFAULT 1000 AFTER `conversions_per_point`", "Migration: Add clicks_per_point to points_config table", $log, $errors);
+    }
+    if (!in_array('click_value_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `click_value_per_point` DECIMAL(10,3) DEFAULT 1.000 AFTER `clicks_per_point`", "Migration: Add click_value_per_point to points_config table", $log, $errors);
+    }
+    if (!in_array('vendor_clicks_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `vendor_clicks_per_point` INT DEFAULT 1000 AFTER `click_value_per_point`", "Migration: Add vendor_clicks_per_point to points_config table", $log, $errors);
+    }
+    if (!in_array('vendor_click_value_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `vendor_click_value_per_point` DECIMAL(10,3) DEFAULT 1.000 AFTER `vendor_clicks_per_point`", "Migration: Add vendor_click_value_per_point to points_config table", $log, $errors);
+    }
+    if (!in_array('vendor_conversions_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `vendor_conversions_per_point` INT DEFAULT 100 AFTER `vendor_click_value_per_point`", "Migration: Add vendor_conversions_per_point to points_config table", $log, $errors);
+    }
+    if (!in_array('vendor_conversion_value_per_point', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `vendor_conversion_value_per_point` DECIMAL(10,3) DEFAULT 2.000 AFTER `vendor_conversions_per_point`", "Migration: Add vendor_conversion_value_per_point to points_config table", $log, $errors);
+    }
+} catch (Exception $e) {}
 
 run($db, "
 CREATE TABLE IF NOT EXISTS `wallet_transactions` (
@@ -206,7 +235,7 @@ CREATE TABLE IF NOT EXISTS `client_wallet_transactions` (
 // Points config
 $existing = $db->query("SELECT COUNT(*) FROM points_config")->fetchColumn();
 if ($existing == 0) {
-    $db->exec("INSERT INTO points_config (conversions_per_point, value_per_point, currency) VALUES (100, 1.000, 'BHD')");
+    $db->exec("INSERT INTO points_config (conversions_per_point, clicks_per_point, click_value_per_point, vendor_clicks_per_point, vendor_click_value_per_point, vendor_conversions_per_point, vendor_conversion_value_per_point, value_per_point, currency) VALUES (100, 1000, 1.000, 1000, 1.000, 100, 2.000, 1.000, 'BHD')");
     $log[] = "✅ Seeded: points_config";
 }
 

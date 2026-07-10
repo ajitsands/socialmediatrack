@@ -12,11 +12,14 @@ if ($action === 'overview') {
     $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
     $cpp = $cfg ? (int)$cfg['conversions_per_point'] : 100;
     $vpp = $cfg ? (float)$cfg['value_per_point'] : 1;
+    $clpp = $cfg && isset($cfg['clicks_per_point']) ? (int)$cfg['clicks_per_point'] : 1000;
+    $clvpp = $cfg && isset($cfg['click_value_per_point']) ? (float)$cfg['click_value_per_point'] : 1;
     $cur = $cfg ? $cfg['currency'] : 'BHD';
 
     $stmt = $db->query("
         SELECT u.id, u.name, u.social_handle, u.platform,
-               COUNT(CASE WHEN e.type='conversion' THEN 1 END) as total_conversions
+               COUNT(CASE WHEN e.type='conversion' THEN 1 END) as total_conversions,
+               COUNT(CASE WHEN e.type='click' THEN 1 END) as total_clicks
         FROM users u
         LEFT JOIN campaigns c ON c.influencer_id = u.id
         LEFT JOIN events    e ON e.campaign_id   = c.id
@@ -30,8 +33,14 @@ if ($action === 'overview') {
     $totalPaid    = 0;
 
     foreach ($rows as $r) {
-        $totalPts  = $cpp > 0 ? floor($r['total_conversions'] / $cpp) : 0;
-        $earnings  = round($totalPts * $vpp, 3);
+        $convPts   = $cpp > 0 ? floor($r['total_conversions'] / $cpp) : 0;
+        $convEarnings = $convPts * $vpp;
+        
+        $clickPts  = $clpp > 0 ? floor($r['total_clicks'] / $clpp) : 0;
+        $clickEarnings = $clickPts * $clvpp;
+
+        $totalPts  = $convPts + $clickPts;
+        $earnings  = round($convEarnings + $clickEarnings, 3);
 
         $paidStmt = $db->prepare("SELECT COALESCE(SUM(amount),0) FROM wallet_transactions WHERE influencer_id=? AND type='debit' AND status='paid'");
         $paidStmt->execute([$r['id']]);
@@ -43,6 +52,7 @@ if ($action === 'overview') {
             'name'             => $r['name'],
             'social_handle'    => $r['social_handle'],
             'platform'         => $r['platform'],
+            'total_clicks'     => $r['total_clicks'],
             'total_conversions'=> $r['total_conversions'],
             'total_points'     => $totalPts,
             'total_earnings'   => $earnings,

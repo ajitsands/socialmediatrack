@@ -126,7 +126,14 @@ if ($action === 'click') {
         $prodRate = $stmtRate->fetch();
 
         if ($prodRate && $prodRate['client_id'] !== null) {
-            $cpc = (float)$prodRate['cpc_rate'];
+            $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
+            $cpc = 0.000;
+            if ($cfg && isset($cfg['vendor_clicks_per_point']) && (int)$cfg['vendor_clicks_per_point'] > 0) {
+                $cpc = round((float)$cfg['vendor_click_value_per_point'] / (int)$cfg['vendor_clicks_per_point'], 3);
+            } else {
+                $cpc = (float)$prodRate['cpc_rate'];
+            }
+
             if ($cpc > 0 && (float)$prodRate['wallet_balance'] >= 0.100) {
                 try {
                     $db->beginTransaction();
@@ -136,6 +143,30 @@ if ($action === 'click') {
                     $db->commit();
                 } catch (Exception $e) {
                     $db->rollBack();
+                }
+            }
+        }
+
+        // Auto-credit click points check
+        $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
+        if ($cfg && isset($cfg['clicks_per_point'])) {
+            $clpp = (int)$cfg['clicks_per_point'];
+            if ($clpp > 0) {
+                // Get influencer_id
+                $infStmt = $db->prepare("SELECT influencer_id FROM campaigns WHERE id=?");
+                $infStmt->execute([$campaignId]);
+                $infId = (int)$infStmt->fetchColumn();
+
+                // Count clicks for this influencer
+                $clickCnt = $db->prepare("SELECT COUNT(*) FROM events e JOIN campaigns c ON c.id=e.campaign_id WHERE c.influencer_id=? AND e.type='click'");
+                $clickCnt->execute([$infId]);
+                $totalClicks = (int)$clickCnt->fetchColumn();
+
+                if ($totalClicks % $clpp === 0 && $totalClicks > 0) {
+                    $creditPts = 1;
+                    $creditAmt = round($creditPts * (float)$cfg['click_value_per_point'], 3);
+                    $db->prepare("INSERT INTO wallet_transactions (influencer_id,campaign_id,points,amount,type,status,note) VALUES (?,?,?,?,'credit','pending','Auto-credited for reaching click milestone')")
+                       ->execute([$infId, $campaignId, $creditPts, $creditAmt]);
                 }
             }
         }
@@ -202,8 +233,15 @@ if ($action === 'convert') {
     $ins->execute([$campaignId, $visitorName, $visitorPhone, $countryCode, $promoCode ?: $camp['offer_code'], $ipHash, $ua]);
 
     // Client Wallet CPL Deduction
+    $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
     if ($camp['client_id'] !== null) {
-        $cpl = (float)$camp['cpl_rate'];
+        $cpl = 0.000;
+        if ($cfg && isset($cfg['vendor_conversions_per_point']) && (int)$cfg['vendor_conversions_per_point'] > 0) {
+            $cpl = round((float)$cfg['vendor_conversion_value_per_point'] / (int)$cfg['vendor_conversions_per_point'], 3);
+        } else {
+            $cpl = (float)$camp['cpl_rate'];
+        }
+
         if ($cpl > 0 && (float)$camp['wallet_balance'] >= 0.100) {
             try {
                 $db->beginTransaction();
@@ -218,7 +256,6 @@ if ($action === 'convert') {
     }
 
     // Auto-credit points check
-    $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
     if ($cfg) {
         $cpp = (int)$cfg['conversions_per_point'];
         // Get influencer_id

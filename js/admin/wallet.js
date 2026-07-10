@@ -49,7 +49,7 @@ App.Admin.Wallet = (function ($) {
               <thead>
                 <tr>
                   <th>#</th><th>Influencer</th><th>Platform</th>
-                  <th>Conversions</th><th>Points</th><th>Total Earned</th>
+                  <th>Clicks</th><th>Conversions</th><th>Points</th><th>Total Earned</th>
                   <th>Paid</th><th>Pending</th><th>Action</th>
                 </tr>
               </thead>
@@ -124,7 +124,7 @@ App.Admin.Wallet = (function ($) {
       _dt = $('#tbl-wallets').DataTable({
         data: d.wallets,
         pageLength: 15,
-        order: [[7,'desc']],
+        order: [[8,'desc']],
         columns: [
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false },
           { data: 'name', render: function(d,t,r){
@@ -136,6 +136,7 @@ App.Admin.Wallet = (function ($) {
             }
           },
           { data: 'platform', render: function(d){ return `<span class="badge platform-${d}">${d}</span>`; }},
+          { data: 'total_clicks',      render: function(d){ return `<span style="color:var(--info)">${d}</span>`; }},
           { data: 'total_conversions', render: function(d){ return `<strong style="color:var(--success)">${d}</strong>`; }},
           { data: 'total_points', render: function(d){ return d>0?`<span class="badge badge-primary">🎯 ${d} pts</span>`:`<span class="badge badge-muted">0</span>`; }},
           { data: 'total_earnings', render: function(d,t,r){ return `<strong>${r.currency} ${parseFloat(d).toFixed(3)}</strong>`; }},

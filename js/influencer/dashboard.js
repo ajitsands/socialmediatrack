@@ -148,7 +148,7 @@ App.Influencer.Dashboard = (function ($) {
       var d = res.data;
       animateCounter('inf-points', d.total_points);
       $('#inf-earnings').text(d.currency + ' ' + parseFloat(d.pending_amount||0).toFixed(3));
-      $('#inf-cpp-hint').text(d.conversions_per_point + ' conversions = 1 point');
+      $('#inf-cpp-hint').html(`${d.clicks_per_point} clicks = 1 pt | ${d.conversions_per_point} convs = 1 pt`);
       $('#inf-paid-hint').text(d.currency + ' ' + parseFloat(d.paid_amount||0).toFixed(3) + ' paid out');
     });
   }
@@ -282,10 +282,11 @@ App.Influencer.Wallet = (function ($) {
 
       <!-- Wallet Cards -->
       <div class="stats-grid" style="margin-bottom:24px">
-        <div class="stat-card purple"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="wlt-convs">—</div><div class="stat-label">${t('total_conversions')}</div></div></div>
-        <div class="stat-card blue"><div class="stat-icon">🎯</div><div class="stat-info"><div class="stat-value" id="wlt-pts">—</div><div class="stat-label">${t('total_points')}</div></div></div>
-        <div class="stat-card amber"><div class="stat-icon">⏳</div><div class="stat-info"><div class="stat-value" id="wlt-pending">—</div><div class="stat-label">${t('pending_amount')}</div></div></div>
-        <div class="stat-card green"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="wlt-paid">—</div><div class="stat-label">${t('paid_amount')}</div></div></div>
+        <div class="stat-card amber"><div class="stat-icon">👆</div><div class="stat-info"><div class="stat-value" id="wlt-clicks">—</div><div class="stat-label">Total Clicks</div></div></div>
+        <div class="stat-card purple"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="wlt-convs">—</div><div class="stat-label">Total Conversions</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon">🎯</div><div class="stat-info"><div class="stat-value" id="wlt-pts">—</div><div class="stat-label">Total Points</div></div></div>
+        <div class="stat-card coral"><div class="stat-icon">⏳</div><div class="stat-info"><div class="stat-value" id="wlt-pending">—</div><div class="stat-label">Pending Amount</div></div></div>
+        <div class="stat-card green"><div class="stat-icon">💵</div><div class="stat-info"><div class="stat-value" id="wlt-paid">—</div><div class="stat-label">Paid Amount</div></div></div>
       </div>
 
       <!-- Earning Info -->
@@ -321,11 +322,15 @@ App.Influencer.Wallet = (function ($) {
   function loadWallet() {
     App.api.points.myPoints().done(function(res){
       var d = res.data;
+      $('#wlt-clicks').text(d.total_clicks);
       $('#wlt-convs').text(d.total_conversions);
       $('#wlt-pts').text(d.total_points);
       $('#wlt-pending').text(d.currency + ' ' + parseFloat(d.pending_amount||0).toFixed(3));
       $('#wlt-paid').text(d.currency + ' ' + parseFloat(d.paid_amount||0).toFixed(3));
-      $('#earn-formula').text(d.conversions_per_point + ' conversions = 1 point = ' + d.currency + ' ' + parseFloat(d.value_per_point).toFixed(3));
+      $('#earn-formula').html(`
+        - <strong>${d.clicks_per_point} clicks</strong> = 1 point = <strong>${parseFloat(d.click_value_per_point).toFixed(3)} ${d.currency}</strong><br>
+        - <strong>${d.conversions_per_point} conversions</strong> = 1 point = <strong>${parseFloat(d.value_per_point).toFixed(3)} ${d.currency}</strong>
+      `);
     });
 
     App.api.wallet.myTransactions().done(function(res){
