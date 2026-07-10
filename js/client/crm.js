@@ -161,9 +161,10 @@ App.Client.Crm = (function ($) {
   function loadProductsFilter() {
     App.api.clientAnalytics.byProduct()
       .done(function (res) {
+        var items = res.data || [];
         var $sel = $('#crm-leads-product-filter');
         $sel.html('<option value="0">All Products</option>');
-        res.forEach(function (p) {
+        items.forEach(function (p) {
           $sel.append('<option value="' + p.id + '">' + p.name + '</option>');
         });
       });
@@ -176,8 +177,9 @@ App.Client.Crm = (function ($) {
 
     App.api.clientAnalytics.crmLeads(productId)
       .done(function (res) {
+        var items = res.data || [];
         var tbody = '';
-        res.forEach(function (r) {
+        items.forEach(function (r) {
           var statusBadge = statusLabels[r.last_call_status || 'pending'];
           var contact = (r.visitor_country_code || '') + ' ' + (r.visitor_phone || '');
           var lastCall = r.last_call_date ? new Date(r.last_call_date).toLocaleString() : 'Never Called';
@@ -230,14 +232,15 @@ App.Client.Crm = (function ($) {
 
     App.api.clientAnalytics.callHistory(eventId)
       .done(function (res) {
-        if (!res.length) {
+        var items = res.data || [];
+        if (!items.length) {
           $container.html('<div style="text-align:center;padding:32px 10px;color:var(--text-muted);font-size:0.9rem">💡 No calls logged yet. Select a status and add feedback to register your first follow-up entry!</div>');
           return;
         }
 
         var html = '<div class="crm-timeline" style="position:relative; padding-left:20px; border-left:2px solid var(--border); margin-left:12px; margin-top:8px">';
         
-        res.forEach(function (c) {
+        items.forEach(function (c) {
           var badge = statusTimelineBadges[c.status || 'pending'];
           var color = statusColors[c.status || 'pending'] || '#6B7280';
           var date = new Date(c.created_at).toLocaleString();
