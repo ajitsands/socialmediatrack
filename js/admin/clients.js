@@ -186,8 +186,33 @@ App.Admin.Clients = (function ($) {
 
                 <!-- Right panel: Ledger transactions list -->
                 <div>
-                  <h3 style="font-size:1.1rem; margin-bottom:12px; color:var(--text)">📋 Ledger Transactions</h3>
-                  <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius:8px">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+                    <h3 style="font-size:1.1rem;margin:0;color:var(--text);flex:1">📋 Ledger Transactions</h3>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                      <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">From</label>
+                      <input type="date" id="ledger-date-from" class="form-control" style="font-size:0.82rem;padding:5px 8px;width:135px">
+                      <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">To</label>
+                      <input type="date" id="ledger-date-to" class="form-control" style="font-size:0.82rem;padding:5px 8px;width:135px">
+                    </div>
+                  </div>
+
+                  <!-- Summary Cards -->
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+                    <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 12px;text-align:center">
+                      <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Collection</div>
+                      <div id="ledger-total-credit" style="font-size:1.1rem;font-weight:700;color:#22C55E;margin-top:4px">0.000 BHD</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 12px;text-align:center">
+                      <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Paid (Debits)</div>
+                      <div id="ledger-total-debit" style="font-size:1.1rem;font-weight:700;color:#EF4444;margin-top:4px">0.000 BHD</div>
+                    </div>
+                    <div style="background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.25);border-radius:10px;padding:10px 12px;text-align:center">
+                      <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Net Balance</div>
+                      <div id="ledger-net-balance" style="font-size:1.1rem;font-weight:700;color:#6C63FF;margin-top:4px">0.000 BHD</div>
+                    </div>
+                  </div>
+
+                  <div style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius:8px">
                     <table class="dataTable" style="width:100%; font-size:0.88rem; margin:0">
                       <thead>
                         <tr>
@@ -399,14 +424,31 @@ App.Admin.Clients = (function ($) {
       var id = $(this).closest('tr').data('id');
       _activeClientIdForWallet = id;
 
+      // Default date range: current month
+      var now    = new Date();
+      var y      = now.getFullYear();
+      var m      = String(now.getMonth() + 1).padStart(2, '0');
+      var d      = String(now.getDate()).padStart(2, '0');
+      var firstDay = y + '-' + m + '-01';
+      var today    = y + '-' + m + '-' + d;
+      $('#ledger-date-from').val(firstDay);
+      $('#ledger-date-to').val(today);
+
       $('#form-wallet-add-funds')[0].reset();
       $('#wallet-modal-client-name').text('Loading...');
       $('#wallet-modal-balance').text('0.000 BHD');
       $('#wallet-ledger-body').html('<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">Loading transactions...</td></tr>');
-      
+
       // Load details & ledger
-      loadLedgerDetails(id);
+      loadLedgerDetails(id, firstDay, today);
       $('#modal-wallet').show();
+    });
+
+    // Date range filter change
+    $(document).on('change', '#ledger-date-from, #ledger-date-to', function () {
+      if (_activeClientIdForWallet) {
+        loadLedgerDetails(_activeClientIdForWallet, $('#ledger-date-from').val(), $('#ledger-date-to').val());
+      }
     });
 
     // Submit Add Funds (Credit Wallet Ledger)
@@ -429,7 +471,7 @@ App.Admin.Clients = (function ($) {
       }).done(function (res) {
         Swal.fire({ icon: 'success', title: 'Funds Credited', text: 'Credit transaction logged successfully.', timer: 1200, showConfirmButton: false });
         $('#form-wallet-add-funds')[0].reset();
-        loadLedgerDetails(_activeClientIdForWallet);
+        loadLedgerDetails(_activeClientIdForWallet, $('#ledger-date-from').val(), $('#ledger-date-to').val());
         loadTable(); // Refresh balance in main table
       }).fail(function (err) {
         App.api.handleError(err);
@@ -437,7 +479,7 @@ App.Admin.Clients = (function ($) {
     });
   }
 
-  function loadLedgerDetails(clientId) {
+  function loadLedgerDetails(clientId, dateFrom, dateTo) {
     // 1. Get Client balance & name
     App.api.clients.get(clientId).done(function (res) {
       var c = res.data;
@@ -447,12 +489,27 @@ App.Admin.Clients = (function ($) {
       $('#wallet-modal-balance').text(balanceVal.toFixed(3) + ' BHD').css('color', balanceColor);
     });
 
-    // 2. Load Ledger
-    App.api.clients.ledger(clientId).done(function (res) {
+    // 2. Load Ledger (with optional date filter)
+    App.api.clients.ledger(clientId, dateFrom || '', dateTo || '').done(function (res) {
       var logs = res.data;
       var html = '';
+
+      // Calculate summary totals from filtered results
+      var totalCredit = 0, totalDebit = 0;
+      logs.forEach(function (l) {
+        var amt = parseFloat(l.amount) || 0;
+        if (l.type === 'credit') totalCredit += amt;
+        else totalDebit += amt;
+      });
+      var netBalance = totalCredit - totalDebit;
+      var netColor   = netBalance >= 0 ? '#22C55E' : '#EF4444';
+
+      $('#ledger-total-credit').text(totalCredit.toFixed(3) + ' BHD');
+      $('#ledger-total-debit').text(totalDebit.toFixed(3) + ' BHD');
+      $('#ledger-net-balance').text((netBalance >= 0 ? '+' : '') + netBalance.toFixed(3) + ' BHD').css('color', netColor);
+
       if (logs.length === 0) {
-        html = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No ledger logs.</td></tr>`;
+        html = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found for this period.</td></tr>`;
       } else {
         var paymentMethodLabels = {
           cash: '💵 Cash',
@@ -468,7 +525,7 @@ App.Admin.Clients = (function ($) {
           var typeBadge = isCredit 
             ? `<span class="badge badge-success" style="font-size:0.75rem">Credit</span>` 
             : `<span class="badge badge-danger" style="font-size:0.75rem">Debit</span>`;
-          
+
           var amountPrefix = isCredit ? '+' : '-';
           var paymentMethodName = paymentMethodLabels[l.payment_method] || l.payment_method;
 

@@ -101,7 +101,7 @@ App.api = (function ($) {
     update:        function (d) { return _request('clients', 'update', d, 'POST'); },
     delete:        function (id){ return _request('clients', 'delete', {id: id}, 'POST'); },
     toggleStatus:  function (id){ return _request('clients', 'toggle_status', {id: id}, 'POST'); },
-    ledger:        function (id){ return _request('clients', 'wallet_transactions', {client_id: id}, 'GET'); },
+    ledger:        function (id, dateFrom, dateTo){ return _request('clients', 'wallet_transactions', {client_id: id, date_from: dateFrom||'', date_to: dateTo||''}, 'GET'); },
     addFunds:      function (d) { return _request('clients', 'add_funds', d, 'POST'); },
   };
 

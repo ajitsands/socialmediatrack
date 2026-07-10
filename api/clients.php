@@ -118,25 +118,36 @@ if ($action === 'delete') {
 
 // ─── Ledger Transactions List ────────────────
 if ($action === 'wallet_transactions') {
-    $clientId = (int)param('client_id', 0);
+    $clientId  = (int)param('client_id', 0);
+    $dateFrom  = param('date_from', '');
+    $dateTo    = param('date_to', '');
+
+    $conditions = [];
+    $params     = [];
 
     if ($clientId) {
-        $stmt = $db->prepare("
-            SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
-            FROM client_wallet_transactions wt
-            JOIN users u ON u.id = wt.client_id
-            WHERE wt.client_id = ?
-            ORDER BY wt.created_at DESC
-        ");
-        $stmt->execute([$clientId]);
-    } else {
-        $stmt = $db->query("
-            SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
-            FROM client_wallet_transactions wt
-            JOIN users u ON u.id = wt.client_id
-            ORDER BY wt.created_at DESC
-        ");
+        $conditions[] = 'wt.client_id = ?';
+        $params[]     = $clientId;
     }
+    if (!empty($dateFrom)) {
+        $conditions[] = 'DATE(wt.created_at) >= ?';
+        $params[]     = $dateFrom;
+    }
+    if (!empty($dateTo)) {
+        $conditions[] = 'DATE(wt.created_at) <= ?';
+        $params[]     = $dateTo;
+    }
+
+    $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+
+    $stmt = $db->prepare("
+        SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
+        FROM client_wallet_transactions wt
+        JOIN users u ON u.id = wt.client_id
+        $where
+        ORDER BY wt.created_at DESC
+    ");
+    $stmt->execute($params);
     apiSuccess($stmt->fetchAll());
 }
 
