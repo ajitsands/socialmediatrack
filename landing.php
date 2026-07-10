@@ -164,7 +164,7 @@ header("Pragma: no-cache");
     <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(0,0,0,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:#ffffff; color:#1a1a2e; position:relative">
       <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:#9ca3af; cursor:pointer;">✕</button>
       <div style="margin-bottom:20px;">
-        <img src="logos/SaNDSLab%20Logo%20Big.png" alt="SaNDS Lab Logo" style="max-width:200px; height:auto; margin:0 auto; display:block;">
+        <img src="logos/sandslab_logo.png" alt="SaNDS Lab Logo" style="max-width:200px; height:auto; margin:0 auto; display:block;">
       </div>
       <h2 style="font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#1a1a2e">SaNDS Lab</h2>
       <p style="font-size:0.95rem; margin:0 0 16px 0; color:#6b7280; font-weight:500;">Custom Software Developer</p>
