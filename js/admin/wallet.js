@@ -264,7 +264,15 @@ App.Admin.Wallet = (function ($) {
           },
           { data: 'status', render: function(d){ return d==='paid'?`<span class="badge badge-success">Paid</span>`:`<span class="badge badge-warning">Pending</span>`; }},
           { data: 'note', render: function(d){ return d||'—'; }},
-          { data: 'created_at', render: function(d){ return d?new Date(d).toLocaleString():'—'; }},
+          { 
+            data: 'created_at', 
+            render: function(d, type){ 
+              if (type === 'sort' || type === 'type') {
+                return d ? new Date(d).getTime() : 0;
+              }
+              return d ? new Date(d).toLocaleString() : '—'; 
+            }
+          },
         ]
       });
     });
@@ -327,7 +335,15 @@ App.Admin.Wallet = (function ($) {
             } 
           },
           { data: 'note', render: function(d){ return `<span style="color:var(--text-muted);font-size:0.88rem">${d||'—'}</span>`; } },
-          { data: 'created_at', render: function(d){ return d ? new Date(d).toLocaleString() : '—'; } }
+          { 
+            data: 'created_at', 
+            render: function(d, type){ 
+              if (type === 'sort' || type === 'type') {
+                return d ? new Date(d).getTime() : 0;
+              }
+              return d ? new Date(d).toLocaleString() : '—'; 
+            } 
+          }
         ]
       });
     });

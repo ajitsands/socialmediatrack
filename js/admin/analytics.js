@@ -241,7 +241,15 @@ App.Admin.Analytics = (function ($) {
             }
           },
           { data: 'influencer_name' },
-          { data: 'timestamp', render: function(d){ return new Date(d).toLocaleString(); }}
+          { 
+            data: 'timestamp', 
+            render: function(d, type){ 
+              if (type === 'sort' || type === 'type') {
+                return d ? new Date(d).getTime() : 0;
+              }
+              return d ? new Date(d).toLocaleString() : '—'; 
+            }
+          }
         ]
       });
     });

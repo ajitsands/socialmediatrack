@@ -138,7 +138,7 @@ App.Influencer.Wallet = (function ($) {
 
           tbody += `
             <tr>
-              <td>${date}</td>
+              <td data-order="${new Date(t.created_at).getTime()}">${date}</td>
               <td>${typeBadge}</td>
               <td>${ptsDisplay}</td>
               <td>${amtDisplay}</td>

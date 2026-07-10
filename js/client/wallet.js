@@ -166,7 +166,15 @@ App.Client.Wallet = (function ($) {
           pageLength: 10,
           order: [[0, 'desc']],
           columns: [
-            { data: 'created_at', render: function(d){ return `<strong>${new Date(d).toLocaleString()}</strong>`; } },
+            { 
+              data: 'created_at', 
+              render: function(d, type){ 
+                if (type === 'sort' || type === 'type') {
+                  return new Date(d).getTime();
+                }
+                return `<strong>${new Date(d).toLocaleString()}</strong>`; 
+              } 
+            },
             { data: 'type', render: function(d){
                 var isCredit = d === 'credit';
                 var cls = isCredit ? 'badge-success' : 'badge-danger';

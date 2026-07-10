@@ -147,7 +147,15 @@ App.Admin.Dashboard = (function ($) {
           info: false,
           order: [[0, 'desc']],
           columns: [
-            { data: 'timestamp', render: function(d){ return d ? new Date(d).toLocaleString() : '—'; }},
+            { 
+              data: 'timestamp', 
+              render: function(d, type){ 
+                if (type === 'sort' || type === 'type') {
+                  return d ? new Date(d).getTime() : 0;
+                }
+                return d ? new Date(d).toLocaleString() : '—'; 
+              }
+            },
             { data: 'type', render: function(d){
                 var cls = {click:'badge-info',conversion:'badge-success',skip:'badge-muted'};
                 return '<span class="badge '+cls[d]+'">' + d + '</span>';
