@@ -579,10 +579,8 @@ App.Admin.Clients = (function ($) {
           // Only show delete for manual entries (not auto CPC/CPL)
           var noteCheck = (l.note || '').toLowerCase();
           var isAutoEntry = (
-            noteCheck.indexOf('cpc click on campaign') === 0 || 
-            noteCheck.indexOf('cpl lead on campaign') === 0 ||
-            noteCheck.indexOf('cpc click:') === 0 || 
-            noteCheck.indexOf('cpl lead:') === 0
+            noteCheck.indexOf('cpc click') === 0 || 
+            noteCheck.indexOf('cpl lead') === 0
           );
           var deleteBtn = isAutoEntry
             ? '<td></td>'

@@ -218,10 +218,8 @@ if ($action === 'delete_wallet_transaction') {
     // Block deletion of auto-generated CPC/CPL system entries
     $note = strtolower($tx['note'] ?? '');
     $isAutoEntry = (
-        strpos($note, 'cpc click on campaign') === 0 || 
-        strpos($note, 'cpl lead on campaign') === 0 || 
-        strpos($note, 'cpc click:') === 0 || 
-        strpos($note, 'cpl lead:') === 0
+        strpos($note, 'cpc click') === 0 || 
+        strpos($note, 'cpl lead') === 0
     );
     if ($isAutoEntry) {
         apiError('Auto-generated CPC/CPL transactions cannot be deleted.');
