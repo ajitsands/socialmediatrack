@@ -290,7 +290,15 @@ App.Client.Dashboard = (function ($) {
             },
             { data: 'product_name',     render: function(d){ return '<span style="font-weight:600;color:var(--text)">' + d + '</span>'; } },
             { data: 'influencer_name',  render: function(d){ return '<span style="color:var(--primary);font-weight:500">' + d + '</span>'; } },
-            { data: 'timestamp',        render: function(d){ return '<span style="font-size:0.85rem">' + new Date(d).toLocaleString() + '</span>'; } },
+            {
+              data: 'timestamp',
+              render: function(d, type) {
+                if (type === 'sort' || type === 'type') {
+                  return new Date(d).getTime();
+                }
+                return '<span style="font-size:0.85rem">' + new Date(d).toLocaleString() + '</span>';
+              }
+            },
             {
               data: null,
               orderable: false,
