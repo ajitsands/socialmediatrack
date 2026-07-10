@@ -164,7 +164,7 @@ App.Client.Crm = (function ($) {
         var $sel = $('#crm-leads-product-filter');
         $sel.html('<option value="0">All Products</option>');
         res.forEach(function (p) {
-          $sel.append('<option value="' + p.product_id + '">' + p.product_name + '</option>');
+          $sel.append('<option value="' + p.id + '">' + p.name + '</option>');
         });
       });
   }
@@ -187,22 +187,22 @@ App.Client.Crm = (function ($) {
 
           tbody += `
             <tr>
-              <td>\${statusBadge}</td>
-              <td style="font-weight:600;color:var(--text)">\${r.visitor_name || 'Unknown'}</td>
-              <td>\${contact}</td>
-              <td>\${promo}</td>
-              <td>\${source}</td>
-              <td style="font-weight:500">\${r.product_name}</td>
-              <td style="font-size:0.85rem">\${date}</td>
-              <td style="font-size:0.85rem;color:var(--text-muted)">\${lastCall}</td>
+              <td>${statusBadge}</td>
+              <td style="font-weight:600;color:var(--text)">${r.visitor_name || 'Unknown'}</td>
+              <td>${contact}</td>
+              <td>${promo}</td>
+              <td>${source}</td>
+              <td style="font-weight:500">${r.product_name}</td>
+              <td style="font-size:0.85rem">${date}</td>
+              <td style="font-size:0.85rem;color:var(--text-muted)">${lastCall}</td>
               <td>
                 <button class="btn btn-primary btn-sm btn-open-call" 
-                        data-id="\${r.id}" 
-                        data-name="\${r.visitor_name || 'Unknown'}" 
-                        data-phone="\${contact}" 
-                        data-promo="\${r.product_name} (\${r.offer_code})" 
-                        data-date="\${date}" 
-                        data-status="\${r.last_call_status || 'pending'}"
+                        data-id="${r.id}" 
+                        data-name="${r.visitor_name || 'Unknown'}" 
+                        data-phone="${contact}" 
+                        data-promo="${r.product_name} (${r.offer_code})" 
+                        data-date="${date}" 
+                        data-status="${r.last_call_status || 'pending'}"
                         style="font-size:0.78rem;padding:4px 10px;white-space:nowrap">
                   📞 Call Log
                 </button>
@@ -245,13 +245,13 @@ App.Client.Crm = (function ($) {
 
           html += `
             <div style="position:relative; margin-bottom:20px">
-              <div style="position:absolute; left:-27px; top:3px; width:12px; height:12px; border-radius:50%; background:\${color}; border:2px solid #fff; box-shadow: 0 0 0 2px \${color}33"></div>
+              <div style="position:absolute; left:-27px; top:3px; width:12px; height:12px; border-radius:50%; background:${color}; border:2px solid #fff; box-shadow: 0 0 0 2px ${color}33"></div>
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px">
-                \${badge}
-                <span>\${date}</span>
+                ${badge}
+                <span>${date}</span>
               </div>
               <div style="font-size:0.83rem; color:var(--text); background:rgba(0,0,0,0.02); padding:8px 12px; border-radius:6px; border:1px solid var(--border)">
-                \${note}
+                ${note}
               </div>
             </div>
           `;
