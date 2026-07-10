@@ -18,66 +18,97 @@ App.Admin.Points = (function ($) {
   function render() {
     var t = App.i18n.t.bind(App.i18n);
     $('#page-content').html(`
+      <style>
+        .points-config-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+          margin-bottom: 24px;
+        }
+        .points-config-col-left {
+          border-right: 1px solid var(--border);
+          padding-right: 32px;
+        }
+        @media (max-width: 768px) {
+          .points-config-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .points-config-col-left {
+            border-right: none;
+            padding-right: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+          }
+        }
+      </style>
+
       <div class="page-header">
         <div><h2>🎯 ${t('points')}</h2><p class="page-subtitle">Configure how influencers earn points and rewards</p></div>
       </div>
 
       <!-- Config Card -->
-      <div class="card" style="margin-bottom:24px;max-width:700px">
+      <div class="card" style="margin-bottom:24px;max-width:900px">
         <div class="card-header"><span class="card-title">⚙️ ${t('points_config')}</span></div>
         <div class="card-body">
           
-          <h3 style="margin-top:0;margin-bottom:12px;font-size:1.05rem;color:var(--primary)">📢 Influencer Reward Rates</h3>
-          <div class="grid-2" style="margin-bottom:16px">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Conversions Per Point</label>
-              <input type="number" class="form-control" id="cfg-cpp" min="1" placeholder="e.g. 100">
-              <div class="form-hint">Every X conversions = 1 point</div>
+          <div class="points-config-grid">
+            <!-- Left Column: Influencer Reward Rates -->
+            <div class="points-config-col-left">
+              <h3 style="margin-top:0;margin-bottom:16px;font-size:1.05rem;color:var(--primary)">📢 Influencer Reward Rates</h3>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Conversions Per Point</label>
+                <input type="number" class="form-control" id="cfg-cpp" min="1" placeholder="e.g. 100">
+                <div class="form-hint">Every X conversions = 1 point</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Value Per Point</label>
+                <input type="number" class="form-control" id="cfg-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
+                <div class="form-hint">1 point = X currency units</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Clicks Per Point</label>
+                <input type="number" class="form-control" id="cfg-clicks-pp" min="1" placeholder="e.g. 1000">
+                <div class="form-hint">Every X clicks = 1 point</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Value Per Click Point</label>
+                <input type="number" class="form-control" id="cfg-click-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
+                <div class="form-hint">1 click point = X currency units</div>
+              </div>
             </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Value Per Point</label>
-              <input type="number" class="form-control" id="cfg-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
-              <div class="form-hint">1 point = X currency units</div>
-            </div>
-          </div>
-          
-          <div class="grid-2" style="margin-bottom:24px">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Clicks Per Point</label>
-              <input type="number" class="form-control" id="cfg-clicks-pp" min="1" placeholder="e.g. 1000">
-              <div class="form-hint">Every X clicks = 1 point</div>
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Value Per Click Point</label>
-              <input type="number" class="form-control" id="cfg-click-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
-              <div class="form-hint">1 click point = X currency units</div>
-            </div>
-          </div>
 
-          <h3 style="margin-top:0;margin-bottom:12px;font-size:1.05rem;color:#FF6584">🏢 Vendor Charge Rates (Cuts)</h3>
-          <div class="grid-2" style="margin-bottom:16px">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Clicks Per Point (Vendor)</label>
-              <input type="number" class="form-control" id="cfg-vendor-clicks-pp" min="1" placeholder="e.g. 1000">
-              <div class="form-hint">Every X clicks cut = 1 point</div>
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Value Per Click Point (Vendor)</label>
-              <input type="number" class="form-control" id="cfg-vendor-click-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
-              <div class="form-hint">1 click point cut = X currency units</div>
-            </div>
-          </div>
-
-          <div class="grid-2" style="margin-bottom:20px">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Leads Per Point (Vendor)</label>
-              <input type="number" class="form-control" id="cfg-vendor-convs-pp" min="1" placeholder="e.g. 100">
-              <div class="form-hint">Every X leads cut = 1 point</div>
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Value Per Lead Point (Vendor)</label>
-              <input type="number" class="form-control" id="cfg-vendor-conv-vpp" min="0.001" step="0.001" placeholder="e.g. 2.000">
-              <div class="form-hint">1 lead point cut = X currency units</div>
+            <!-- Right Column: Vendor Charge Rates -->
+            <div>
+              <h3 style="margin-top:0;margin-bottom:16px;font-size:1.05rem;color:#FF6584">🏢 Vendor Charge Rates (Cuts)</h3>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Clicks Per Point (Vendor)</label>
+                <input type="number" class="form-control" id="cfg-vendor-clicks-pp" min="1" placeholder="e.g. 1000">
+                <div class="form-hint">Every X clicks cut = 1 point</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Value Per Click Point (Vendor)</label>
+                <input type="number" class="form-control" id="cfg-vendor-click-vpp" min="0.001" step="0.001" placeholder="e.g. 1.000">
+                <div class="form-hint">1 click point cut = X currency units</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Leads Per Point (Vendor)</label>
+                <input type="number" class="form-control" id="cfg-vendor-convs-pp" min="1" placeholder="e.g. 100">
+                <div class="form-hint">Every X leads cut = 1 point</div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Value Per Lead Point (Vendor)</label>
+                <input type="number" class="form-control" id="cfg-vendor-conv-vpp" min="0.001" step="0.001" placeholder="e.g. 2.000">
+                <div class="form-hint">1 lead point cut = X currency units</div>
+              </div>
             </div>
           </div>
 
