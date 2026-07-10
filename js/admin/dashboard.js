@@ -8,9 +8,11 @@ App.Admin.Dashboard = (function ($) {
   'use strict';
 
   var _liveInterval = null;
+  var _recentTable  = null;
 
   function init() {
     if (!App.auth.requireAuth('admin')) return;
+    _recentTable = null; // Reset on init
     render();
     loadStats();
   }
@@ -131,42 +133,45 @@ App.Admin.Dashboard = (function ($) {
       })
       .fail(App.api.handleError);
 
-    // Load recent events
-    App.api.analytics.recentEvents(20)
+    // Load recent events (last 100)
+    App.api.analytics.recentEvents(100)
       .done(function (res) {
         var events = res.data;
         $('#activity-count').text(events.length + ' recent');
 
-        var dt = $('#tbl-recent-events');
-        if ($.fn.DataTable.isDataTable(dt)) dt.DataTable().destroy();
-
-        dt.DataTable({
-          data: events,
-          paging: false,
-          searching: false,
-          info: false,
-          order: [[0, 'desc']],
-          columns: [
-            { 
-              data: 'timestamp', 
-              render: function(d, type){ 
-                if (type === 'sort' || type === 'type') {
-                  return d ? new Date(d).getTime() : 0;
+        if (_recentTable) {
+          // Update data smoothly without destroying the DOM structure
+          _recentTable.clear().rows.add(events).draw(false);
+        } else {
+          _recentTable = $('#tbl-recent-events').DataTable({
+            data: events,
+            paging: true,
+            searching: true,
+            info: true,
+            pageLength: 10,
+            order: [[0, 'desc']],
+            columns: [
+              { 
+                data: 'timestamp', 
+                render: function(d, type){ 
+                  if (type === 'sort' || type === 'type') {
+                    return d ? new Date(d).getTime() : 0;
+                  }
+                  return d ? new Date(d).toLocaleString() : '—'; 
                 }
-                return d ? new Date(d).toLocaleString() : '—'; 
-              }
-            },
-            { data: 'type', render: function(d){
-                var cls = {click:'badge-info',conversion:'badge-success',skip:'badge-muted'};
-                return '<span class="badge '+cls[d]+'">' + d + '</span>';
-              }
-            },
-            { data: 'product_name' },
-            { data: 'influencer_name' },
-            { data: 'visitor_name', render: function(d){ return d || '<span class="badge badge-muted">Anonymous</span>'; }},
-            { data: 'promo_entered', render: function(d){ return d ? '<code style="background:var(--badge-bg);padding:2px 6px;border-radius:4px">'+d+'</code>' : '—'; }},
-          ]
-        });
+              },
+              { data: 'type', render: function(d){
+                  var cls = {click:'badge-info',conversion:'badge-success',skip:'badge-muted'};
+                  return '<span class="badge '+cls[d]+'">' + d + '</span>';
+                }
+              },
+              { data: 'product_name' },
+              { data: 'influencer_name' },
+              { data: 'visitor_name', render: function(d){ return d || '<span class="badge badge-muted">Anonymous</span>'; }},
+              { data: 'promo_entered', render: function(d){ return d ? '<code style="background:var(--badge-bg);padding:2px 6px;border-radius:4px">'+d+'</code>' : '—'; }},
+            ]
+          });
+        }
       })
       .fail(App.api.handleError);
 
