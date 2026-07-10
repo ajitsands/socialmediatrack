@@ -237,7 +237,22 @@ App.Influencer.Campaigns = (function ($) {
               return `<span style="font-weight:700;color:${rate>=10?'var(--success)':rate>=5?'var(--warning)':'var(--danger)'}">${rate}%</span>`;
             }
           },
-          { data: 'status', render: function(d){ var cls={active:'badge-success',paused:'badge-warning',expired:'badge-danger'}; return `<span class="badge ${cls[d]||'badge-muted'}">${d}</span>`; }},
+          { data: 'status', render: function(d,t,r){
+              if (d === 'expired') {
+                return '<span class="badge badge-danger">Expired</span>';
+              }
+              var checked = d === 'active' ? 'checked' : '';
+              return `
+                <div style="display:flex;align-items:center;gap:8px">
+                  <label class="switch-toggle" style="cursor:pointer">
+                    <input type="checkbox" class="toggle-camp-status" data-id="${r.id}" ${checked}>
+                    <span class="switch-slider"></span>
+                  </label>
+                  <span style="font-size:0.8rem;font-weight:600;color:${d==='active'?'#22C55E':'#F59E0B'}">${d==='active'?'Running':'Not Running'}</span>
+                </div>
+              `;
+            }
+          },
           { data: null, orderable:false, render: function(d,t,r){
               var url = 'landing.php?ref=' + encodeURIComponent(r.ref_token);
               var icons = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'👍',twitter:'🐦',other:'🌐'};
@@ -252,6 +267,23 @@ App.Influencer.Campaigns = (function ($) {
       });
     }).fail(App.api.handleError);
   }
+
+  $(document).on('change', '.toggle-camp-status', function () {
+    var $chk = $(this);
+    var id = $chk.data('id');
+    var isRunning = $chk.is(':checked');
+    var newStatus = isRunning ? 'active' : 'paused';
+
+    App.api.campaigns.updateStatus({ id: id, status: newStatus })
+      .done(function (res) {
+        Swal.fire({ icon: 'success', title: 'Campaign Status Updated', showConfirmButton: false, timer: 1000 });
+        loadCampaigns();
+      })
+      .fail(function (err) {
+        $chk.prop('checked', !isRunning);
+        App.api.handleError(err);
+      });
+  });
 
   $(document).on('click','.btn-copy-camp-link', function(){
     var link = window.location.origin + window.location.pathname.replace('index.php','') + $(this).data('link');

@@ -156,10 +156,24 @@ if ($action === 'generate') {
 
 // ─── Update Campaign Status ───────────────────
 if ($action === 'update_status') {
-    requireAdmin();
+    requireAuth();
+    $sess   = $_SESSION;
     $id     = (int)($input['id'] ?? 0);
-    $status = in_array($input['status'] ?? '', ['active','paused','expired']) ? $input['status'] : null;
+    $status = in_array($input['status'] ?? '', ['active','paused']) ? $input['status'] : null;
+    if ($sess['role'] === 'admin') {
+        $status = in_array($input['status'] ?? '', ['active','paused','expired']) ? $input['status'] : null;
+    }
     if (!$id || !$status) apiError('ID and valid status required.');
+
+    // Enforce ownership if role is influencer
+    if ($sess['role'] === 'influencer') {
+        $chk = $db->prepare("SELECT id FROM campaigns WHERE id=? AND influencer_id=?");
+        $chk->execute([$id, $sess['user_id']]);
+        if (!$chk->fetch()) {
+            apiError('Unauthorized. You do not own this campaign.', 403);
+        }
+    }
+
     $stmt = $db->prepare("UPDATE campaigns SET status=? WHERE id=?");
     $stmt->execute([$status, $id]);
     apiSuccess([], 'Campaign status updated');
