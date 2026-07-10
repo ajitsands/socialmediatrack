@@ -188,13 +188,13 @@ header("Pragma: no-cache");
 <!-- SaNDS Lab Info Modal -->
 <div id="modal-sandslab" class="custom-modal" style="display:none; z-index:99999;">
   <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px);">
-    <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(255,255,255,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:var(--card-bg); position:relative">
-      <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">✕</button>
-      <div style="margin-bottom:16px;">
-        <img src="logos/SaNDSLab Logo Big.png" alt="SaNDS Lab Logo" style="max-width:180px; height:auto; margin:0 auto; display:block;">
+    <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(0,0,0,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:#ffffff; color:#1a1a2e; position:relative">
+      <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:#9ca3af; cursor:pointer;">✕</button>
+      <div style="margin-bottom:20px;">
+        <img src="logos/SaNDSLab%20Logo%20Big.png" alt="SaNDS Lab Logo" style="max-width:200px; height:auto; margin:0 auto; display:block;">
       </div>
-      <h2 style="font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:var(--text)">SaNDS Lab</h2>
-      <p style="font-size:0.95rem; margin:0 0 16px 0; color:var(--text-muted); font-weight:500;">Custom Software Developer</p>
+      <h2 style="font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#1a1a2e">SaNDS Lab</h2>
+      <p style="font-size:0.95rem; margin:0 0 16px 0; color:#6b7280; font-weight:500;">Custom Software Developer</p>
       <div style="display:inline-block; background:linear-gradient(135deg, #6C63FF, #3B82F6); color:#fff; font-size:0.75rem; font-weight:800; padding:6px 16px; border-radius:50px; text-transform:uppercase; letter-spacing:1px; box-shadow:0 4px 10px rgba(108,99,255,0.3); margin-bottom:28px;">
         ⚡ AI Powered
       </div>
