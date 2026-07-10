@@ -152,33 +152,33 @@ header("Pragma: no-cache");
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- App modules -->
-<script src="js/i18n.js?v=1.1.9"></script>
-<script src="js/countries.js?v=1.1.9"></script>
-<script src="js/auth.js?v=1.1.9"></script>
-<script src="js/api.js?v=1.1.9"></script>
+<script src="js/i18n.js?v=1.2.0"></script>
+<script src="js/countries.js?v=1.2.0"></script>
+<script src="js/auth.js?v=1.2.0"></script>
+<script src="js/api.js?v=1.2.0"></script>
 
 <!-- Admin modules -->
-<script src="js/admin/dashboard.js?v=1.1.9"></script>
-<script src="js/admin/influencers.js?v=1.1.9"></script>
-<script src="js/admin/clients.js?v=1.1.9"></script>
-<script src="js/admin/products.js?v=1.1.9"></script>
-<script src="js/admin/campaigns.js?v=1.1.9"></script>
-<script src="js/admin/analytics.js?v=1.1.9"></script>
-<script src="js/admin/points.js?v=1.1.9"></script>
-<script src="js/admin/wallet.js?v=1.1.9"></script>
+<script src="js/admin/dashboard.js?v=1.2.0"></script>
+<script src="js/admin/influencers.js?v=1.2.0"></script>
+<script src="js/admin/clients.js?v=1.2.0"></script>
+<script src="js/admin/products.js?v=1.2.0"></script>
+<script src="js/admin/campaigns.js?v=1.2.0"></script>
+<script src="js/admin/analytics.js?v=1.2.0"></script>
+<script src="js/admin/points.js?v=1.2.0"></script>
+<script src="js/admin/wallet.js?v=1.2.0"></script>
 
 <!-- Influencer modules -->
-<script src="js/influencer/dashboard.js?v=1.1.9"></script>
-<script src="js/influencer/wallet.js?v=1.1.9"></script>
-<script src="js/influencer/profile.js?v=1.1.9"></script>
+<script src="js/influencer/dashboard.js?v=1.2.0"></script>
+<script src="js/influencer/wallet.js?v=1.2.0"></script>
+<script src="js/influencer/profile.js?v=1.2.0"></script>
 
 <!-- Client modules -->
-<script src="js/client/dashboard.js?v=1.1.9"></script>
-<script src="js/client/crm.js?v=1.1.9"></script>
-<script src="js/client/wallet.js?v=1.1.9"></script>
+<script src="js/client/dashboard.js?v=1.2.0"></script>
+<script src="js/client/crm.js?v=1.2.0"></script>
+<script src="js/client/wallet.js?v=1.2.0"></script>
 
 <!-- Router (boot last) -->
-<script src="js/app.js?v=1.1.9"></script>
+<script src="js/app.js?v=1.2.0"></script>
 
 </body>
 </html>

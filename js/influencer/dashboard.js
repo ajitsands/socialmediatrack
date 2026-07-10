@@ -194,6 +194,17 @@ App.Influencer.Campaigns = (function ($) {
         <div><h2>🔗 My Campaigns</h2><p class="page-subtitle">All your active tracking links</p></div>
       </div>
       <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+          <span class="card-title">🔗 Campaigns List</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:0.85rem;color:var(--text-muted)">Show:</span>
+            <select class="form-control" id="filter-camp-status" style="width:160px;padding:6px 12px;font-size:0.88rem">
+              <option value="all">All Campaigns</option>
+              <option value="active">Running</option>
+              <option value="paused">Not Running</option>
+            </select>
+          </div>
+        </div>
         <div class="card-body" style="padding:0">
           <div class="table-wrapper" style="padding:16px">
             <table id="tbl-my-campaigns" class="dataTable" style="width:100%">
@@ -283,6 +294,18 @@ App.Influencer.Campaigns = (function ($) {
         $chk.prop('checked', !isRunning);
         App.api.handleError(err);
       });
+  });
+
+  $(document).off('change', '#filter-camp-status').on('change', '#filter-camp-status', function () {
+    var val = $(this).val();
+    if (!_dt) return;
+    if (val === 'all') {
+      _dt.column(8).search('').draw();
+    } else if (val === 'active') {
+      _dt.column(8).search('Running').draw();
+    } else if (val === 'paused') {
+      _dt.column(8).search('Not Running').draw();
+    }
   });
 
   $(document).on('click','.btn-copy-camp-link', function(){
