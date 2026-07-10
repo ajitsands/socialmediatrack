@@ -197,7 +197,7 @@ App.Admin.Clients = (function ($) {
                   </div>
 
                   <!-- Summary Cards -->
-                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
                     <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 12px;text-align:center">
                       <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Collection</div>
                       <div id="ledger-total-credit" style="font-size:1.1rem;font-weight:700;color:#22C55E;margin-top:4px">0.000 BHD</div>
@@ -205,10 +205,6 @@ App.Admin.Clients = (function ($) {
                     <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 12px;text-align:center">
                       <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Paid (Debits)</div>
                       <div id="ledger-total-debit" style="font-size:1.1rem;font-weight:700;color:#EF4444;margin-top:4px">0.000 BHD</div>
-                    </div>
-                    <div style="background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.25);border-radius:10px;padding:10px 12px;text-align:center">
-                      <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Net Balance</div>
-                      <div id="ledger-net-balance" style="font-size:1.1rem;font-weight:700;color:#6C63FF;margin-top:4px">0.000 BHD</div>
                     </div>
                   </div>
 
@@ -501,12 +497,8 @@ App.Admin.Clients = (function ($) {
         if (l.type === 'credit') totalCredit += amt;
         else totalDebit += amt;
       });
-      var netBalance = totalCredit - totalDebit;
-      var netColor   = netBalance >= 0 ? '#22C55E' : '#EF4444';
-
       $('#ledger-total-credit').text(totalCredit.toFixed(3) + ' BHD');
       $('#ledger-total-debit').text(totalDebit.toFixed(3) + ' BHD');
-      $('#ledger-net-balance').text((netBalance >= 0 ? '+' : '') + netBalance.toFixed(3) + ' BHD').css('color', netColor);
 
       if (logs.length === 0) {
         html = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found for this period.</td></tr>`;
