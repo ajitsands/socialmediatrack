@@ -140,7 +140,7 @@ App.Admin.Clients = (function ($) {
       <!-- Ledger / Wallet Transaction Modal -->
       <div id="modal-wallet" class="custom-modal" style="display:none">
         <div class="modal-overlay" style="background:rgba(0,0,0,0.6)">
-          <div class="modal-box" style="max-width:900px; width:95%">
+          <div class="modal-box" style="max-width:1200px; width:95%">
             <div class="modal-header">
               <span class="modal-title">💰 Client Wallet Ledger & Transaction Log</span>
               <button class="modal-close" id="btn-close-modal-wallet">✕</button>

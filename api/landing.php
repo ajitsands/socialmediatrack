@@ -116,7 +116,7 @@ if ($action === 'click') {
 
         // Client Wallet CPC Deduction
         $stmtRate = $db->prepare("
-            SELECT p.client_id, p.cpc_rate, cl.wallet_balance
+            SELECT p.client_id, p.cpc_rate, cl.wallet_balance, c.name as campaign_name
             FROM campaigns c
             JOIN products p ON p.id = c.product_id
             LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client'
@@ -138,8 +138,8 @@ if ($action === 'click') {
                 try {
                     $db->beginTransaction();
                     $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$cpc, $prodRate['client_id']]);
-                    $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'debit', 'system', ?)")
-                       ->execute([$prodRate['client_id'], $cpc, 'CPC Click on Campaign #' . $campaignId]);
+                    $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'debit', 'system', ?)") 
+                       ->execute([$prodRate['client_id'], $cpc, 'CPC Click on Campaign: ' . ($prodRate['campaign_name'] ?? 'Campaign #' . $campaignId)]);
                     $db->commit();
                 } catch (Exception $e) {
                     $db->rollBack();
@@ -195,7 +195,7 @@ if ($action === 'convert') {
 
     // Get campaign to return redirect URL
     $db   = getDB();
-    $stmt = $db->prepare("SELECT c.offer_code, c.discount_value, c.discount_type, p.product_url, p.demo_url, p.client_id, p.cpl_rate, cl.wallet_balance FROM campaigns c JOIN products p ON p.id=c.product_id LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client' WHERE c.id=? AND c.status='active'");
+    $stmt = $db->prepare("SELECT c.name as campaign_name, c.offer_code, c.discount_value, c.discount_type, p.product_url, p.demo_url, p.client_id, p.cpl_rate, cl.wallet_balance FROM campaigns c JOIN products p ON p.id=c.product_id LEFT JOIN users cl ON cl.id = p.client_id AND cl.role = 'client' WHERE c.id=? AND c.status='active'");
     $stmt->execute([$campaignId]);
     $camp = $stmt->fetch();
     if (!$camp) apiError('Campaign not found or inactive.');
@@ -247,7 +247,7 @@ if ($action === 'convert') {
                 $db->beginTransaction();
                 $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$cpl, $camp['client_id']]);
                 $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'debit', 'system', ?)")
-                   ->execute([$camp['client_id'], $cpl, 'CPL Lead on Campaign #' . $campaignId]);
+                   ->execute([$camp['client_id'], $cpl, 'CPL Lead on Campaign: ' . ($camp['campaign_name'] ?? 'Campaign #' . $campaignId)]);
                 $db->commit();
             } catch (Exception $e) {
                 $db->rollBack();
