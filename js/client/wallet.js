@@ -76,9 +76,28 @@ App.Client.Wallet = (function ($) {
 
         <!-- Right Panel: Ledger Table -->
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
             <h3 style="font-size:1.05rem; margin:0">📋 Statements & Transaction History</h3>
+            <div style="display:flex; align-items:center; gap:8px">
+              <label style="font-size:0.78rem; color:var(--text-muted)">From</label>
+              <input type="date" id="client-ledger-date-from" class="form-control" style="font-size:0.8rem; padding:4px 8px; width:130px">
+              <label style="font-size:0.78rem; color:var(--text-muted)">To</label>
+              <input type="date" id="client-ledger-date-to" class="form-control" style="font-size:0.8rem; padding:4px 8px; width:130px">
+            </div>
           </div>
+          
+          <!-- Summary Cards -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:16px 16px 0 16px">
+            <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:10px; padding:10px; text-align:center">
+              <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px">Total Credited</div>
+              <div id="client-ledger-total-credit" style="font-size:1.15rem; font-weight:700; color:#22C55E; margin-top:3px">0.000 BHD</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:10px; text-align:center">
+              <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px">Total Deductions</div>
+              <div id="client-ledger-total-debit" style="font-size:1.15rem; font-weight:700; color:#EF4444; margin-top:3px">0.000 BHD</div>
+            </div>
+          </div>
+
           <div class="card-body" style="padding:0">
             <div class="table-wrapper" style="padding:16px">
               <table id="tbl-client-wallet-history" class="dataTable" style="width:100%">
@@ -101,6 +120,14 @@ App.Client.Wallet = (function ($) {
 
       </div>
     `);
+
+    // Default dates to current month
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var d = String(now.getDate()).padStart(2, '0');
+    $('#client-ledger-date-from').val(y + '-' + m + '-01');
+    $('#client-ledger-date-to').val(y + '-' + m + '-' + d);
   }
 
   function loadBalance() {
@@ -114,12 +141,28 @@ App.Client.Wallet = (function ($) {
   }
 
   function loadLedger() {
+    var dateFrom = $('#client-ledger-date-from').val();
+    var dateTo   = $('#client-ledger-date-to').val();
+
     if (_walletTable) { _walletTable.destroy(); _walletTable = null; }
 
-    App.api.clientAnalytics.walletHistory()
+    App.api.clientAnalytics.walletHistory(dateFrom, dateTo)
       .done(function (res) {
+        var logs = res.data;
+
+        // Calculate credits & debits summary
+        var totalCredit = 0, totalDebit = 0;
+        logs.forEach(function (l) {
+          var amt = parseFloat(l.amount) || 0;
+          if (l.type === 'credit') totalCredit += amt;
+          else totalDebit += amt;
+        });
+
+        $('#client-ledger-total-credit').text(totalCredit.toFixed(3) + ' BHD');
+        $('#client-ledger-total-debit').text(totalDebit.toFixed(3) + ' BHD');
+
         _walletTable = $('#tbl-client-wallet-history').DataTable({
-          data: res.data,
+          data: logs,
           pageLength: 10,
           order: [[0, 'desc']],
           columns: [
@@ -145,5 +188,19 @@ App.Client.Wallet = (function ($) {
       .fail(App.api.handleError);
   }
 
-  return { init };
+  function bindEvents() {
+    $(document).on('change', '#client-ledger-date-from, #client-ledger-date-to', function () {
+      loadLedger();
+    });
+  }
+
+  return { 
+    init: function() {
+      if (!App.auth.requireAuth('client')) return;
+      renderLayout();
+      loadBalance();
+      loadLedger();
+      bindEvents();
+    }
+  };
 }(jQuery));

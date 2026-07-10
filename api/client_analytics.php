@@ -183,13 +183,30 @@ if ($action === 'toggle_important') {
 
 // ─── Wallet / Ledger Transaction History ──────
 if ($action === 'wallet_history') {
+    $dateFrom = param('date_from', '');
+    $dateTo   = param('date_to', '');
+
+    $conditions = ['client_id = ?'];
+    $params     = [$clientId];
+
+    if (!empty($dateFrom)) {
+        $conditions[] = 'DATE(created_at) >= ?';
+        $params[]     = $dateFrom;
+    }
+    if (!empty($dateTo)) {
+        $conditions[] = 'DATE(created_at) <= ?';
+        $params[]     = $dateTo;
+    }
+
+    $where = 'WHERE ' . implode(' AND ', $conditions);
+
     $stmt = $db->prepare("
         SELECT id, amount, type, payment_method, note, created_at
         FROM client_wallet_transactions
-        WHERE client_id = ?
+        $where
         ORDER BY created_at DESC
     ");
-    $stmt->execute([$clientId]);
+    $stmt->execute($params);
     apiSuccess($stmt->fetchAll());
 }
 

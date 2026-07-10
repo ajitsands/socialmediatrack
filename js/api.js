@@ -112,7 +112,7 @@ App.api = (function ($) {
     byProduct:     function ()     { return _request('client_analytics', 'by_product', {}, 'GET'); },
     byInfluencer:  function ()     { return _request('client_analytics', 'by_influencer', {}, 'GET'); },
     visitorLeads:  function (pId)  { return _request('client_analytics', 'visitor_leads', {product_id: pId||0}, 'GET'); },
-    walletHistory: function ()     { return _request('client_analytics', 'wallet_history', {}, 'GET'); },
+    walletHistory: function (dateFrom, dateTo) { return _request('client_analytics', 'wallet_history', {date_from: dateFrom||'', date_to: dateTo||''}, 'GET'); },
     markRead:      function (eId)  { return _request('client_analytics', 'mark_read', {event_id: eId}, 'POST'); },
     toggleImportant: function (eId) { return _request('client_analytics', 'toggle_important', {event_id: eId}, 'POST'); },
     crmLeads:      function (pId)  { return _request('client_analytics', 'crm_leads', {product_id: pId||0}, 'GET'); },
