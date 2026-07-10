@@ -84,10 +84,23 @@ if ($action === 'info') {
     // Check if already converted in current session
     $alreadyConverted = !empty($_SESSION['converted_' . $campaignId]);
 
+    // Check if already clicked in current session or 2-hour IP window
+    $alreadyClicked = !empty($_SESSION['clicked_' . $campaignId]);
+    if (!$alreadyClicked) {
+        $twoHoursAgo = date('Y-m-d H:i:s', time() - 7200);
+        $ipHash = getIpHash();
+        $ipCheck = $db->prepare("SELECT id FROM events WHERE campaign_id = ? AND type = 'click' AND ip_hash = ? AND timestamp >= ? LIMIT 1");
+        $ipCheck->execute([$campaignId, $ipHash, $twoHoursAgo]);
+        if ($ipCheck->fetch()) {
+            $alreadyClicked = true;
+        }
+    }
+
     apiSuccess(array_merge($campaign, [
         'total_clicks'      => (int)$stats['clicks'],
         'total_conversions' => (int)$stats['conversions'],
         'already_converted' => $alreadyConverted,
+        'already_clicked'   => $alreadyClicked,
     ]));
 }
 
@@ -101,14 +114,32 @@ if ($action === 'click') {
 
     $campaignId = (int)$data['campaign_id'];
 
-    // Deduplicate clicks using active PHP session
+    // Deduplicate clicks using active PHP session AND IP address within last 2 hours
     $sessionKey = 'clicked_' . $campaignId;
     $db = getDB();
-    if (empty($_SESSION[$sessionKey])) {
+    
+    $alreadyClicked = !empty($_SESSION[$sessionKey]);
+    $ipHash = getIpHash();
+
+    if (!$alreadyClicked) {
+        // Also check database if this IP has clicked this campaign in the last 2 hours (7200 seconds)
+        // Using database-agnostic comparison for portability (MySQL / SQLite compatible)
+        $twoHoursAgo = date('Y-m-d H:i:s', time() - 7200);
+        $ipCheck = $db->prepare("
+            SELECT id FROM events 
+            WHERE campaign_id = ? AND type = 'click' AND ip_hash = ? AND timestamp >= ? 
+            LIMIT 1
+        ");
+        $ipCheck->execute([$campaignId, $ipHash, $twoHoursAgo]);
+        if ($ipCheck->fetch()) {
+            $alreadyClicked = true;
+        }
+    }
+
+    if (!$alreadyClicked) {
         $_SESSION[$sessionKey] = true;
         
         // Record click event
-        $ipHash = getIpHash();
         $ua     = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
 
         $stmt = $db->prepare("INSERT INTO events (campaign_id, type, ip_hash, user_agent) VALUES (?, 'click', ?, ?)");

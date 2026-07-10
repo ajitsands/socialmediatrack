@@ -174,7 +174,11 @@
     $('#lp-price').text(c.currency + ' ' + parseFloat(c.price).toFixed(3));
 
     // Live stats
-    $('#lp-click-count').text(parseInt(c.total_clicks || 0) + 1);
+    var displayClicks = parseInt(c.total_clicks || 0);
+    if (!c.already_clicked) {
+      displayClicks += 1;
+    }
+    $('#lp-click-count').text(displayClicks);
     $('#lp-conv-count').text(c.total_conversions || 0);
 
     // Demo button
