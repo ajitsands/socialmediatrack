@@ -578,7 +578,12 @@ App.Admin.Clients = (function ($) {
 
           // Only show delete for manual entries (not auto CPC/CPL)
           var noteCheck = (l.note || '').toLowerCase();
-          var isAutoEntry = noteCheck.indexOf('cpc click on campaign') === 0 || noteCheck.indexOf('cpl lead on campaign') === 0;
+          var isAutoEntry = (
+            noteCheck.indexOf('cpc click on campaign') === 0 || 
+            noteCheck.indexOf('cpl lead on campaign') === 0 ||
+            noteCheck.indexOf('cpc click:') === 0 || 
+            noteCheck.indexOf('cpl lead:') === 0
+          );
           var deleteBtn = isAutoEntry
             ? '<td></td>'
             : `<td><button class="btn-icon btn-delete-wallet-tx" data-id="${l.id}" title="Delete this entry" style="background:#EF4444;color:#fff;width:26px;height:26px;font-size:0.75rem;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;cursor:pointer">🗑️</button></td>`;
