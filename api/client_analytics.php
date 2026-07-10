@@ -193,4 +193,77 @@ if ($action === 'wallet_history') {
     apiSuccess($stmt->fetchAll());
 }
 
+// ─── CRM Leads (Important Follow-ups) ──────────
+if ($action === 'crm_leads') {
+    $productId = (int)param('product_id', 0);
+    $where = '';
+    $params = [$clientId];
+    if ($productId > 0) {
+        $where = ' AND p.id = ?';
+        $params[] = $productId;
+    }
+    $stmt = $db->prepare("
+        SELECT e.id, e.visitor_name, e.visitor_phone, e.visitor_country_code, e.timestamp,
+               c.offer_code, IFNULL(c.platform, u.platform) as platform,
+               p.name as product_name, p.id as product_id,
+               u.name as influencer_name,
+               (SELECT status FROM lead_calls WHERE event_id = e.id ORDER BY id DESC LIMIT 1) as last_call_status,
+               (SELECT created_at FROM lead_calls WHERE event_id = e.id ORDER BY id DESC LIMIT 1) as last_call_date
+        FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        JOIN users     u ON u.id = c.influencer_id
+        WHERE e.type = 'conversion' AND p.client_id = ? AND e.is_important = 1 $where
+        ORDER BY e.timestamp DESC
+    ");
+    $stmt->execute($params);
+    apiSuccess($stmt->fetchAll());
+}
+
+// ─── Log CRM Call follow-up ───────────────────
+if ($action === 'log_call') {
+    $input   = getInput();
+    $eventId = (int)($input['event_id'] ?? 0);
+    $status  = sanitize($input['status'] ?? '');
+    $feedback= sanitize($input['feedback'] ?? '');
+
+    if (!$eventId) apiError('event_id required.', 400);
+    if (!$status)  apiError('status required.', 400);
+
+    // Verify this event belongs to this client's product
+    $check = $db->prepare("
+        SELECT e.id FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        WHERE e.id = ? AND p.client_id = ? AND e.type = 'conversion'
+    ");
+    $check->execute([$eventId, $clientId]);
+    if (!$check->fetch()) apiError('Event not found or access denied.', 403);
+
+    $ins = $db->prepare("INSERT INTO lead_calls (event_id, status, feedback) VALUES (?, ?, ?)");
+    $ins->execute([$eventId, $status, $feedback]);
+    
+    apiSuccess(null, 'Call log updated.');
+}
+
+// ─── Get Lead Call Logs Timeline ──────────────
+if ($action === 'call_history') {
+    $eventId = (int)param('event_id', 0);
+    if (!$eventId) apiError('event_id required.', 400);
+
+    // Verify this event belongs to this client's product
+    $check = $db->prepare("
+        SELECT e.id FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        WHERE e.id = ? AND p.client_id = ? AND e.type = 'conversion'
+    ");
+    $check->execute([$eventId, $clientId]);
+    if (!$check->fetch()) apiError('Event not found or access denied.', 403);
+
+    $stmt = $db->prepare("SELECT * FROM lead_calls WHERE event_id = ? ORDER BY id DESC");
+    $stmt->execute([$eventId]);
+    apiSuccess($stmt->fetchAll());
+}
+
 apiError('Invalid action');

@@ -235,6 +235,17 @@ CREATE TABLE IF NOT EXISTS `client_wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: client_wallet_transactions", $log, $errors);
 
+run($db, "
+CREATE TABLE IF NOT EXISTS `lead_calls` (
+  `id`          INT AUTO_INCREMENT PRIMARY KEY,
+  `event_id`    INT NOT NULL,
+  `status`      VARCHAR(50) NOT NULL,
+  `feedback`    TEXT,
+  `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`event_id`) REFERENCES `events`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: lead_calls", $log, $errors);
+
 
 // ─── Seed Data ────────────────────────────────
 // Points config

@@ -112,6 +112,9 @@ App.api = (function ($) {
     walletHistory: function ()     { return _request('client_analytics', 'wallet_history', {}, 'GET'); },
     markRead:      function (eId)  { return _request('client_analytics', 'mark_read', {event_id: eId}, 'POST'); },
     toggleImportant: function (eId) { return _request('client_analytics', 'toggle_important', {event_id: eId}, 'POST'); },
+    crmLeads:      function (pId)  { return _request('client_analytics', 'crm_leads', {product_id: pId||0}, 'GET'); },
+    logCall:       function (d)    { return _request('client_analytics', 'log_call', d, 'POST'); },
+    callHistory:   function (eId)  { return _request('client_analytics', 'call_history', {event_id: eId}, 'GET'); },
   };
 
   /* ── Analytics ───────────────────────────── */
