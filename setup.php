@@ -149,15 +149,20 @@ CREATE TABLE IF NOT EXISTS `events` (
   `ip_hash`             VARCHAR(64),
   `user_agent`          TEXT,
   `timestamp`           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `is_read`             TINYINT(1) NOT NULL DEFAULT 0,
+  `is_important`        TINYINT(1) NOT NULL DEFAULT 0,
   FOREIGN KEY (`campaign_id`) REFERENCES `campaigns`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: events", $log, $errors);
 
-// Migration: Add is_read to events table (for client lead read/unread tracking)
+// Migration: Add is_read and is_important to events table (for client lead tracking)
 try {
     $evCols = $db->query("DESCRIBE `events`")->fetchAll(PDO::FETCH_COLUMN);
     if (!in_array('is_read', $evCols)) {
         run($db, "ALTER TABLE `events` ADD COLUMN `is_read` TINYINT(1) NOT NULL DEFAULT 0 AFTER `timestamp`", "Migration: Add is_read column to events table", $log, $errors);
+    }
+    if (!in_array('is_important', $evCols)) {
+        run($db, "ALTER TABLE `events` ADD COLUMN `is_important` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_read`", "Migration: Add is_important column to events table", $log, $errors);
     }
 } catch (Exception $e) {}
 

@@ -264,8 +264,9 @@ App.Client.Dashboard = (function ($) {
             {
               data: 'visitor_name',
               render: function(d, t, r) {
+                var star = parseInt(r.is_important) === 1 ? ' <span style="color:#F59E0B" title="Important">⭐</span>' : '';
                 var style = parseInt(r.is_read) === 0 ? 'font-weight:700;color:var(--text)' : 'color:var(--text-muted)';
-                return '<span style="' + style + '">' + (d || 'Unknown') + '</span>';
+                return '<span style="' + style + '">' + (d || 'Unknown') + star + '</span>';
               }
             },
             {
@@ -294,16 +295,20 @@ App.Client.Dashboard = (function ($) {
               data: null,
               orderable: false,
               render: function(d, t, r) {
-                if (parseInt(r.is_read) === 1) {
-                  return '<span style="color:var(--text-muted);font-size:0.8rem">—</span>';
+                if (parseInt(r.is_read) === 0) {
+                  return '<button class="btn btn-secondary btn-sm btn-mark-read" data-id="' + r.id + '" style="font-size:0.78rem;padding:4px 10px;white-space:nowrap">✅ Mark Read</button>';
                 }
-                return '<button class="btn btn-secondary btn-sm btn-mark-read" data-id="' + r.id + '" style="font-size:0.78rem;padding:4px 10px;white-space:nowrap">✅ Mark Read</button>';
+                var starText = parseInt(r.is_important) === 1 ? '⭐ Important' : '☆ Make Important';
+                var starClass = parseInt(r.is_important) === 1 ? 'btn-warning' : 'btn-secondary';
+                return '<button class="btn ' + starClass + ' btn-sm btn-toggle-important" data-id="' + r.id + '" style="font-size:0.78rem;padding:4px 10px;white-space:nowrap">' + starText + '</button>';
               }
             }
           ],
           createdRow: function(row, data) {
             if (parseInt(data.is_read) === 0) {
               $(row).css({ 'border-left': '3px solid #EF4444', 'background': 'rgba(239,68,68,0.04)' });
+            } else if (parseInt(data.is_important) === 1) {
+              $(row).css({ 'border-left': '3px solid #F59E0B', 'background': 'rgba(245,158,11,0.04)' });
             }
           }
         });
@@ -331,6 +336,24 @@ App.Client.Dashboard = (function ($) {
         })
         .fail(function (err) {
           $btn.prop('disabled', false).text('✅ Mark Read');
+          App.api.handleError(err);
+        });
+    });
+
+    // Toggle Important button — delegated for DataTables pagination compatibility
+    $(document).on('click', '.btn-toggle-important', function () {
+      var $btn = $(this);
+      var eventId = $btn.data('id');
+      $btn.prop('disabled', true).text('…');
+
+      App.api.clientAnalytics.toggleImportant(eventId)
+        .done(function () {
+          // Refresh table while preserving current product filter
+          var pId = $('#client-leads-product-filter').val();
+          loadLeadsLog(pId);
+        })
+        .fail(function (err) {
+          $btn.prop('disabled', false);
           App.api.handleError(err);
         });
     });

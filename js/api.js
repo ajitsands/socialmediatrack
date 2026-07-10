@@ -111,6 +111,7 @@ App.api = (function ($) {
     visitorLeads:  function (pId)  { return _request('client_analytics', 'visitor_leads', {product_id: pId||0}, 'GET'); },
     walletHistory: function ()     { return _request('client_analytics', 'wallet_history', {}, 'GET'); },
     markRead:      function (eId)  { return _request('client_analytics', 'mark_read', {event_id: eId}, 'POST'); },
+    toggleImportant: function (eId) { return _request('client_analytics', 'toggle_important', {event_id: eId}, 'POST'); },
   };
 
   /* ── Analytics ───────────────────────────── */

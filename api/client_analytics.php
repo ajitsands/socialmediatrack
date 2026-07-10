@@ -106,19 +106,23 @@ if ($action === 'visitor_leads') {
         $params[]   = $productId;
     }
 
-    // Detect whether is_read column exists (safe for servers not yet migrated)
+    // Detect whether is_read and is_important columns exist (safe for servers not yet migrated)
     $hasIsRead = false;
+    $hasIsImportant = false;
     try {
         $colCheck = $db->query("DESCRIBE `events`")->fetchAll(PDO::FETCH_COLUMN);
         $hasIsRead = in_array('is_read', $colCheck);
+        $hasIsImportant = in_array('is_important', $colCheck);
     } catch (Exception $e) {}
 
     $isReadSelect  = $hasIsRead ? 'IFNULL(e.is_read, 0)' : '0';
     $isReadOrderBy = $hasIsRead ? 'e.is_read ASC,' : '';
+    $isImportantSelect = $hasIsImportant ? 'IFNULL(e.is_important, 0)' : '0';
 
     $stmt = $db->prepare("
         SELECT e.id, e.visitor_name, e.visitor_phone, e.visitor_country_code, e.timestamp,
                $isReadSelect as is_read,
+               $isImportantSelect as is_important,
                c.offer_code, IFNULL(c.platform, u.platform) as platform,
                p.name as product_name, p.id as product_id,
                u.name as influencer_name
@@ -152,6 +156,29 @@ if ($action === 'mark_read') {
     $upd = $db->prepare("UPDATE events SET is_read = 1 WHERE id = ?");
     $upd->execute([$eventId]);
     apiSuccess(['message' => 'Lead marked as read.']);
+}
+
+// ─── Toggle Lead Important Status ────────────
+if ($action === 'toggle_important') {
+    $input   = getInput();
+    $eventId = (int)($input['event_id'] ?? 0);
+    if (!$eventId) apiError('event_id required.', 400);
+
+    // Verify this event belongs to this client's product
+    $check = $db->prepare("
+        SELECT e.id, e.is_important FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        WHERE e.id = ? AND p.client_id = ? AND e.type = 'conversion'
+    ");
+    $check->execute([$eventId, $clientId]);
+    $event = $check->fetch();
+    if (!$event) apiError('Event not found or access denied.', 403);
+
+    $newVal = (int)$event['is_important'] === 1 ? 0 : 1;
+    $upd = $db->prepare("UPDATE events SET is_important = ? WHERE id = ?");
+    $upd->execute([$newVal, $eventId]);
+    apiSuccess(['is_important' => $newVal], $newVal ? 'Lead marked as important.' : 'Lead unmarked as important.');
 }
 
 // ─── Wallet / Ledger Transaction History ──────
