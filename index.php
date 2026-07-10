@@ -182,6 +182,9 @@ header("Pragma: no-cache");
 <script src="js/client/crm.js?v=1.2.5"></script>
 <script src="js/client/wallet.js?v=1.2.5"></script>
 
+<!-- Router (boot last) -->
+<script src="js/app.js?v=1.2.5"></script>
+
 <!-- SaNDS Lab Info Modal -->
 <div id="modal-sandslab" class="custom-modal" style="display:none; z-index:99999;">
   <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px);">
