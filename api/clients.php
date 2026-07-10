@@ -203,4 +203,44 @@ if ($action === 'add_funds') {
     }
 }
 
+// ─── Delete Manual Wallet Transaction ────────────
+if ($action === 'delete_wallet_transaction') {
+    $txId = (int)($input['id'] ?? 0);
+    if (!$txId) apiError('Transaction ID is required.');
+
+    // Fetch the transaction first
+    $stmt = $db->prepare("SELECT * FROM client_wallet_transactions WHERE id = ?");
+    $stmt->execute([$txId]);
+    $tx = $stmt->fetch();
+
+    if (!$tx) apiError('Transaction not found.', 404);
+
+    // Block deletion of auto-generated CPC/CPL system entries
+    $note = strtolower($tx['note'] ?? '');
+    $isAutoEntry = (strpos($note, 'cpc click on campaign') === 0 || strpos($note, 'cpl lead on campaign') === 0);
+    if ($isAutoEntry) {
+        apiError('Auto-generated CPC/CPL transactions cannot be deleted.');
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // Reverse the wallet balance effect
+        if ($tx['type'] === 'credit') {
+            $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$tx['amount'], $tx['client_id']]);
+        } else {
+            $db->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?")->execute([$tx['amount'], $tx['client_id']]);
+        }
+
+        // Delete the transaction record
+        $db->prepare("DELETE FROM client_wallet_transactions WHERE id = ?")->execute([$txId]);
+
+        $db->commit();
+        apiSuccess([], 'Transaction deleted and wallet balance reversed.');
+    } catch (Exception $e) {
+        $db->rollBack();
+        apiError('Failed to delete transaction: ' . $e->getMessage());
+    }
+}
+
 apiError('Invalid action');

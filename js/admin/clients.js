@@ -228,10 +228,11 @@ App.Admin.Clients = (function ($) {
                           <th>Method</th>
                           <th>Amount</th>
                           <th>Note</th>
+                          <th style="width:40px"></th>
                         </tr>
                       </thead>
                       <tbody id="wallet-ledger-body">
-                        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found</td></tr>
+                        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -458,6 +459,29 @@ App.Admin.Clients = (function ($) {
       }
     });
 
+    // Delete manual wallet transaction
+    $(document).on('click', '.btn-delete-wallet-tx', function () {
+      var txId = $(this).data('id');
+      Swal.fire({
+        title: 'Delete this transaction?',
+        text: 'This will permanently remove the entry and reverse its effect on the wallet balance.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Yes, Delete'
+      }).then(function (result) {
+        if (result.isConfirmed) {
+          App.api.clients.deleteWalletTx(txId)
+            .done(function () {
+              Swal.fire({ icon: 'success', title: 'Deleted', text: 'Transaction removed and balance reversed.', timer: 1200, showConfirmButton: false });
+              loadLedgerDetails(_activeClientIdForWallet, $('#ledger-date-from').val(), $('#ledger-date-to').val());
+              loadTable();
+            })
+            .fail(function (err) { App.api.handleError(err); });
+        }
+      });
+    });
+
     // Show/hide Credit/Debit toggle for System Adjust
     $(document).on('change', '#wallet-payment-method', function () {
       var isSystem = $(this).val() === 'system';
@@ -532,7 +556,7 @@ App.Admin.Clients = (function ($) {
       $('#ledger-total-debit').text(totalDebit.toFixed(3) + ' BHD');
 
       if (logs.length === 0) {
-        html = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found for this period.</td></tr>`;
+        html = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">No transactions found for this period.</td></tr>`;
       } else {
         var paymentMethodLabels = {
           cash: '💵 Cash',
@@ -552,6 +576,13 @@ App.Admin.Clients = (function ($) {
           var amountPrefix = isCredit ? '+' : '-';
           var paymentMethodName = paymentMethodLabels[l.payment_method] || l.payment_method;
 
+          // Only show delete for manual entries (not auto CPC/CPL)
+          var noteCheck = (l.note || '').toLowerCase();
+          var isAutoEntry = noteCheck.indexOf('cpc click on campaign') === 0 || noteCheck.indexOf('cpl lead on campaign') === 0;
+          var deleteBtn = isAutoEntry
+            ? '<td></td>'
+            : `<td><button class="btn-icon btn-delete-wallet-tx" data-id="${l.id}" title="Delete this entry" style="background:#EF4444;color:#fff;width:26px;height:26px;font-size:0.75rem;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;cursor:pointer">🗑️</button></td>`;
+
           html += `
             <tr>
               <td>
@@ -564,6 +595,7 @@ App.Admin.Clients = (function ($) {
                 <strong style="color:${amountColor}">${amountPrefix}${parseFloat(l.amount).toFixed(3)}</strong>
               </td>
               <td style="max-width:180px; word-wrap:break-word; font-size:0.8rem">${l.note || '-'}</td>
+              ${deleteBtn}
             </tr>
           `;
         });
