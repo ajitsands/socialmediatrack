@@ -251,7 +251,7 @@ App.Client.Dashboard = (function ($) {
         _leadsTable = $('#tbl-client-leads').DataTable({
           data: leads,
           pageLength: 10,
-          order: [[0, 'asc'], [7, 'desc']],
+          order: [[7, 'desc']],
           columns: [
             {
               data: 'is_read',
