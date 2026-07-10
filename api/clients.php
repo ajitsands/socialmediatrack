@@ -151,16 +151,18 @@ if ($action === 'wallet_transactions') {
     apiSuccess($stmt->fetchAll());
 }
 
-// ─── Add Credit Funds to Wallet ──────────────
+// ─── Add Credit/Debit Funds to Wallet ──────────────
 if ($action === 'add_funds') {
-    $clientId      = (int)($input['client_id'] ?? 0);
-    $amount        = (float)($input['amount'] ?? 0);
-    $paymentMethod = sanitize($input['payment_method'] ?? 'cash');
-    $note          = sanitize($input['note'] ?? '');
+    $clientId       = (int)($input['client_id'] ?? 0);
+    $amount         = (float)($input['amount'] ?? 0);
+    $paymentMethod  = sanitize($input['payment_method'] ?? 'cash');
+    $note           = sanitize($input['note'] ?? '');
+    $txType         = sanitize($input['transaction_type'] ?? 'credit'); // credit or debit
 
     if (!$clientId) apiError('Client ID is required.');
     if ($amount <= 0) apiError('Amount must be greater than zero.');
-    
+    if (!in_array($txType, ['credit', 'debit'])) apiError('Invalid transaction type.');
+
     $validMethods = ['cash', 'bank_transfer', 'cheque', 'qr_pay', 'system'];
     if (!in_array($paymentMethod, $validMethods)) {
         apiError('Invalid payment method.');
@@ -175,18 +177,23 @@ if ($action === 'add_funds') {
         $db->beginTransaction();
 
         // 1. Insert transaction ledger entry
-        $ins = $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, 'credit', ?, ?)");
-        $ins->execute([$clientId, $amount, $paymentMethod, $note]);
+        $ins = $db->prepare("INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note) VALUES (?, ?, ?, ?, ?)");
+        $ins->execute([$clientId, $amount, $txType, $paymentMethod, $note]);
 
-        // 2. Update client's balance in users table
-        $upd = $db->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
+        // 2. Update client's balance (credit = add, debit = subtract)
+        if ($txType === 'debit') {
+            $upd = $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?");
+        } else {
+            $upd = $db->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
+        }
         $upd->execute([$amount, $clientId]);
 
         $db->commit();
-        
+
         // Fetch new balance
         $balStmt = $db->prepare("SELECT wallet_balance FROM users WHERE id = ?");
         $balStmt->execute([$clientId]);
+
         $newBalance = (float)$balStmt->fetchColumn();
 
         apiSuccess(['wallet_balance' => $newBalance], 'Funds added successfully to ledger');

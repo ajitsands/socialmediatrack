@@ -158,14 +158,14 @@ App.Admin.Clients = (function ($) {
                     </div>
                   </div>
 
-                  <h3 style="font-size:1.1rem; margin-bottom:12px; color:var(--text)">➕ Add Credit Funds</h3>
+                  <h3 style="font-size:1.1rem; margin-bottom:12px; color:var(--text)">➕ Add Transaction</h3>
                   <form id="form-wallet-add-funds">
                     <div class="form-group">
                       <label class="form-label">Amount (BHD) <span class="req">*</span></label>
                       <input type="number" step="0.001" min="0.001" class="form-control" id="wallet-amount" placeholder="e.g. 50.000" required style="font-size:1.1rem; font-weight:bold">
                     </div>
                     <div class="form-group">
-                      <label class="form-label">Collection Payment Method <span class="req">*</span></label>
+                      <label class="form-label">Payment Method <span class="req">*</span></label>
                       <select class="form-control" id="wallet-payment-method" required>
                         <option value="cash">💵 Cash Payment</option>
                         <option value="bank_transfer">🏦 Bank Transfer</option>
@@ -174,11 +174,22 @@ App.Admin.Clients = (function ($) {
                         <option value="system">⚙️ System Adjust (Debit/Credit)</option>
                       </select>
                     </div>
+                    <div class="form-group" id="system-adjust-type-row" style="display:none;background:rgba(108,99,255,0.07);border:1px solid rgba(108,99,255,0.2);border-radius:8px;padding:10px 14px">
+                      <label class="form-label" style="margin-bottom:8px">Transaction Type</label>
+                      <div style="display:flex;gap:16px">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:#22C55E">
+                          <input type="radio" name="system-tx-type" id="system-tx-credit" value="credit" checked style="accent-color:#22C55E"> ➕ Credit
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:#EF4444">
+                          <input type="radio" name="system-tx-type" id="system-tx-debit" value="debit" style="accent-color:#EF4444"> ➖ Debit
+                        </label>
+                      </div>
+                    </div>
                     <div class="form-group">
                       <label class="form-label">Note / Reference ID</label>
                       <textarea class="form-control" id="wallet-note" rows="2" placeholder="e.g. Reference No / Cheque No / Cash receipt details"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px">
+                    <button type="submit" class="btn btn-primary" id="btn-wallet-submit" style="width:100%; justify-content:center; padding:12px">
                       💰 Record Transaction (Credit)
                     </button>
                   </form>
@@ -447,12 +458,31 @@ App.Admin.Clients = (function ($) {
       }
     });
 
-    // Submit Add Funds (Credit Wallet Ledger)
+    // Show/hide Credit/Debit toggle for System Adjust
+    $(document).on('change', '#wallet-payment-method', function () {
+      var isSystem = $(this).val() === 'system';
+      $('#system-adjust-type-row').toggle(isSystem);
+      if (!isSystem) {
+        $('#system-tx-credit').prop('checked', true);
+        $('#btn-wallet-submit').text('💰 Record Transaction (Credit)').css('background', '');
+      }
+    });
+
+    // Update button label when credit/debit radio changes
+    $(document).on('change', 'input[name="system-tx-type"]', function () {
+      var isDebit = $(this).val() === 'debit';
+      $('#btn-wallet-submit')
+        .text(isDebit ? '➖ Record Transaction (Debit)' : '💰 Record Transaction (Credit)')
+        .css('background', isDebit ? '#EF4444' : '');
+    });
+
+    // Submit Add Funds (Credit/Debit Wallet Ledger)
     $('#form-wallet-add-funds').on('submit', function (e) {
       e.preventDefault();
       var amount = parseFloat($('#wallet-amount').val());
       var method = $('#wallet-payment-method').val();
-      var note = $('#wallet-note').val().trim();
+      var note   = $('#wallet-note').val().trim();
+      var txType = (method === 'system') ? $('input[name="system-tx-type"]:checked').val() : 'credit';
 
       if (amount <= 0 || isNaN(amount)) {
         Swal.fire({ icon: 'error', title: 'Error', text: 'Please enter a valid positive amount.' });
@@ -460,10 +490,11 @@ App.Admin.Clients = (function ($) {
       }
 
       App.api.clients.addFunds({
-        client_id:      _activeClientIdForWallet,
-        amount:         amount,
-        payment_method: method,
-        note:           note
+        client_id:        _activeClientIdForWallet,
+        amount:           amount,
+        payment_method:   method,
+        transaction_type: txType,
+        note:             note
       }).done(function (res) {
         Swal.fire({ icon: 'success', title: 'Funds Credited', text: 'Credit transaction logged successfully.', timer: 1200, showConfirmButton: false });
         $('#form-wallet-add-funds')[0].reset();
