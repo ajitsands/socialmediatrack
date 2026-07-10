@@ -74,7 +74,7 @@ header("Pragma: no-cache");
     </div>
 
     <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:16px">
-      InfluX Portal v1.0 &copy; 2025
+      InfluX Portal v1.0 &copy; 2025 | Powered by <strong style="color:var(--primary); cursor:pointer; text-decoration:underline" class="trigger-sandslab-modal">SaNDS Lab</strong>
     </p>
   </div>
 </div>
@@ -129,6 +129,11 @@ header("Pragma: no-cache");
       </div>
     </main>
 
+    <!-- Global App Footer -->
+    <footer class="app-footer" style="text-align:center; padding:16px; font-size:0.85rem; color:var(--text-muted); border-top:1px solid var(--border); background:var(--card-bg)">
+      Powered by <strong style="color:var(--primary); cursor:pointer; text-decoration:underline" class="trigger-sandslab-modal">SaNDS Lab</strong>
+    </footer>
+
   </div><!-- /main-content -->
 </div><!-- /app-shell -->
 
@@ -177,8 +182,42 @@ header("Pragma: no-cache");
 <script src="js/client/crm.js?v=1.2.5"></script>
 <script src="js/client/wallet.js?v=1.2.5"></script>
 
-<!-- Router (boot last) -->
-<script src="js/app.js?v=1.2.5"></script>
+<!-- SaNDS Lab Info Modal -->
+<div id="modal-sandslab" class="custom-modal" style="display:none; z-index:99999;">
+  <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px);">
+    <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(255,255,255,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:var(--card-bg); position:relative">
+      <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">✕</button>
+      <div style="margin-bottom:16px;">
+        <img src="logos/SaNDSLab Logo Big.png" alt="SaNDS Lab Logo" style="max-width:180px; height:auto; margin:0 auto; display:block;">
+      </div>
+      <h2 style="font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:var(--text)">SaNDS Lab</h2>
+      <p style="font-size:0.95rem; margin:0 0 16px 0; color:var(--text-muted); font-weight:500;">Custom Software Developer</p>
+      <div style="display:inline-block; background:linear-gradient(135deg, #6C63FF, #3B82F6); color:#fff; font-size:0.75rem; font-weight:800; padding:6px 16px; border-radius:50px; text-transform:uppercase; letter-spacing:1px; box-shadow:0 4px 10px rgba(108,99,255,0.3); margin-bottom:28px;">
+        ⚡ AI Powered
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <a href="https://www.sandslab.com" target="_blank" class="btn" style="background:linear-gradient(135deg, #6C63FF, #4F46E5); color:#fff; justify-content:center; padding:12px; font-weight:700; border-radius:10px; text-decoration:none; display:flex; align-items:center; gap:8px; border:none; transition:transform 0.2s;">
+          🌐 Visit Our Site
+        </a>
+        <a href="https://wa.me/97335078079" target="_blank" class="btn" style="background:linear-gradient(135deg, #25D366, #128C7E); color:#fff; justify-content:center; padding:12px; font-weight:700; border-radius:10px; text-decoration:none; display:flex; align-items:center; gap:8px; border:none; transition:transform 0.2s;">
+          💬 Chat With Us
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).on('click', '.trigger-sandslab-modal', function(e) {
+  e.preventDefault();
+  $('#modal-sandslab').show();
+});
+$(document).on('click', '#btn-close-sandslab, #modal-sandslab .modal-overlay', function(e) {
+  if (e.target === this || this.id === 'btn-close-sandslab') {
+    $('#modal-sandslab').hide();
+  }
+});
+</script>
 
 </body>
 </html>

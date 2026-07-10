@@ -125,7 +125,7 @@ header("Pragma: no-cache");
     <!-- Footer -->
     <div class="lp-footer">
       🔒 Your information is secure and will only be used to process your discount.
-      <br>Powered by <strong>InfluX Portal</strong>
+      <br>Powered by <strong style="color:#6C63FF; cursor:pointer; text-decoration:underline" class="trigger-sandslab-modal">SaNDS Lab</strong>
     </div>
 
   </div><!-- /lp-main-card -->
@@ -157,6 +157,42 @@ header("Pragma: no-cache");
     container.appendChild(p);
   }
 }());
+</script>
+<!-- SaNDS Lab Info Modal -->
+<div id="modal-sandslab" class="custom-modal" style="display:none; z-index:99999;">
+  <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+    <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(255,255,255,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:#1a1a2e; color:#fff; position:relative">
+      <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer;">✕</button>
+      <div style="margin-bottom:16px;">
+        <img src="logos/SaNDSLab Logo Big.png" alt="SaNDS Lab Logo" style="max-width:180px; height:auto; margin:0 auto; display:block;">
+      </div>
+      <h2 style="font-size:1.6rem; font-weight:800; margin:0 0 6px 0; color:#fff">SaNDS Lab</h2>
+      <p style="font-size:0.95rem; margin:0 0 16px 0; color:rgba(255,255,255,0.7); font-weight:500;">Custom Software Developer</p>
+      <div style="display:inline-block; background:linear-gradient(135deg, #6C63FF, #3B82F6); color:#fff; font-size:0.75rem; font-weight:800; padding:6px 16px; border-radius:50px; text-transform:uppercase; letter-spacing:1px; box-shadow:0 4px 10px rgba(108,99,255,0.3); margin-bottom:28px;">
+        ⚡ AI Powered
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <a href="https://www.sandslab.com" target="_blank" class="lp-btn-claim" style="background:linear-gradient(135deg, #6C63FF, #4F46E5); color:#fff; justify-content:center; padding:12px; font-weight:700; border-radius:10px; text-decoration:none; display:flex; align-items:center; gap:8px; border:none; transition:transform 0.2s;">
+          🌐 Visit Our Site
+        </a>
+        <a href="https://wa.me/97335078079" target="_blank" class="lp-btn-claim" style="background:linear-gradient(135deg, #25D366, #128C7E); color:#fff; justify-content:center; padding:12px; font-weight:700; border-radius:10px; text-decoration:none; display:flex; align-items:center; gap:8px; border:none; transition:transform 0.2s;">
+          💬 Chat With Us
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).on('click', '.trigger-sandslab-modal', function(e) {
+  e.preventDefault();
+  $('#modal-sandslab').show();
+});
+$(document).on('click', '#btn-close-sandslab, #modal-sandslab .modal-overlay', function(e) {
+  if (e.target === this || this.id === 'btn-close-sandslab') {
+    $('#modal-sandslab').hide();
+  }
+});
 </script>
 
 </body>
