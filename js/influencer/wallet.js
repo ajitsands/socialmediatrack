@@ -27,12 +27,19 @@ App.Influencer.Wallet = (function ($) {
       </div>
 
       <!-- KPI Summary Row -->
-      <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stats-grid" style="margin-bottom:24px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))">
         <div class="stat-card purple">
           <div class="stat-icon">🎯</div>
           <div class="stat-info">
             <div class="stat-value" id="inf-wal-points">—</div>
             <div class="stat-label">Total Points Earned</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">📈</div>
+          <div class="stat-info">
+            <div class="stat-value" id="inf-wal-earnings">—</div>
+            <div class="stat-label">Total Amount Earned</div>
           </div>
         </div>
         <div class="stat-card green">
@@ -53,8 +60,15 @@ App.Influencer.Wallet = (function ($) {
 
       <!-- Transaction Ledger Card -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <span class="card-title">📋 Transaction Payout Statements</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:0.85rem;color:var(--text-muted)">Date Range:</span>
+            <input type="date" class="form-control" id="filter-start-date" style="width:140px;padding:4px 8px;font-size:0.85rem">
+            <span style="font-size:0.85rem;color:var(--text-muted)">to</span>
+            <input type="date" class="form-control" id="filter-end-date" style="width:140px;padding:4px 8px;font-size:0.85rem">
+            <button class="btn btn-secondary btn-sm" id="btn-clear-date-filter" style="padding:4px 10px;font-size:0.8rem">Clear</button>
+          </div>
         </div>
         <div class="card-body" style="padding:0">
           <div class="table-wrapper" style="padding:16px">
@@ -84,6 +98,7 @@ App.Influencer.Wallet = (function ($) {
       .done(function (res) {
         var d = res.data;
         $('#inf-wal-points').text((d.total_points || 0).toLocaleString());
+        $('#inf-wal-earnings').text((d.currency || 'BHD') + ' ' + parseFloat(d.total_earnings || 0).toFixed(3));
         $('#inf-wal-balance').text((d.currency || 'BHD') + ' ' + parseFloat(d.pending_amount || 0).toFixed(3));
         $('#inf-wal-paid').text((d.currency || 'BHD') + ' ' + parseFloat(d.paid_amount || 0).toFixed(3));
       });
@@ -145,6 +160,49 @@ App.Influencer.Wallet = (function ($) {
       })
       .fail(App.api.handleError);
   }
+
+  // Register custom search filter for dates
+  if ($.fn.dataTable) {
+    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(function(fn) {
+      return fn.name !== 'walletDateFilter';
+    });
+    
+    $.fn.dataTable.ext.search.push(
+      function walletDateFilter(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'tbl-inf-wallet-history') {
+          return true;
+        }
+        var min = $('#filter-start-date').val();
+        var max = $('#filter-end-date').val();
+        var dateStr = data[0]; 
+        if (!dateStr) return true;
+        
+        var rowDate = new Date(dateStr);
+        if (isNaN(rowDate.getTime())) return true;
+        
+        var minDate = min ? new Date(min + 'T00:00:00') : null;
+        var maxDate = max ? new Date(max + 'T23:59:59') : null;
+        
+        if (minDate && rowDate < minDate) return false;
+        if (maxDate && rowDate > maxDate) return false;
+        return true;
+      }
+    );
+  }
+
+  $(document).on('change', '#filter-start-date, #filter-end-date', function () {
+    if (_walletTable) {
+      _walletTable.draw();
+    }
+  });
+
+  $(document).on('click', '#btn-clear-date-filter', function () {
+    $('#filter-start-date').val('');
+    $('#filter-end-date').val('');
+    if (_walletTable) {
+      _walletTable.draw();
+    }
+  });
 
   return { init };
 }(jQuery));
