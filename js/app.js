@@ -27,6 +27,7 @@ App.router = (function ($) {
     'client/products':     function(){ App.Client.Products.init(); },
     'client/wallet':       function(){ App.Client.Wallet.init(); },
     'client/crm':          function(){ App.Client.Crm.init(); },
+    'client/influencers':  function(){ App.Client.Influencers.init(); },
   };
 
   function go(route) {
@@ -130,6 +131,7 @@ App.router = (function ($) {
       'client/products':     'Manage My Products',
       'client/wallet':       'My Wallet Ledger',
       'client/crm':          'Important Leads CRM',
+      'client/influencers':  'Discover Influencers',
     };
     $('#topbar-title').text(titles[route] || route);
   }
@@ -175,6 +177,9 @@ App.router = (function ($) {
         <div class="nav-section-label">Client Menu</div>
         <a class="nav-item" data-route="client/dashboard" href="#/client/dashboard">
           <span class="nav-icon">📊</span><span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-route="client/influencers" href="#/client/influencers">
+          <span class="nav-icon">⭐</span><span>Discover Influencers</span>
         </a>
         <a class="nav-item" data-route="client/products" href="#/client/products">
           <span class="nav-icon">📦</span><span>My Products</span>

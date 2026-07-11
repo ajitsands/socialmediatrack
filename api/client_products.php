@@ -278,5 +278,39 @@ if ($action === 'delete') {
     $stmt->execute([$id, $clientId]);
     apiSuccess(null, 'Product deleted successfully');
 }
+ 
+// ─── List Influencers (for Client Portal) ──────
+if ($action === 'influencers') {
+    $clientStmt = $db->prepare("SELECT company_category FROM users WHERE id = ?");
+    $clientStmt->execute([$clientId]);
+    $clientCat = $clientStmt->fetchColumn() ?: '';
+
+    $infStmt = $db->query("
+        SELECT u.id, u.name, u.avatar,
+               COALESCE(u.follower_count, 0) as primary_followers,
+               (SELECT COALESCE(SUM(follower_count), 0) FROM user_platforms WHERE user_id = u.id) as platform_followers,
+               GROUP_CONCAT(DISTINCT ic.name SEPARATOR ',') as categories
+        FROM users u
+        LEFT JOIN user_categories uc ON uc.user_id = u.id
+        LEFT JOIN influencer_categories ic ON ic.id = uc.category_id
+        WHERE u.role = 'influencer' AND u.status = 'active'
+        GROUP BY u.id, u.name, u.avatar, u.follower_count
+        ORDER BY u.name ASC
+    ");
+    $influencers = $infStmt->fetchAll();
+
+    apiSuccess([
+        'client_category' => $clientCat,
+        'influencers' => array_map(function($inf) {
+            return [
+                'id' => $inf['id'],
+                'name' => $inf['name'],
+                'avatar' => $inf['avatar'],
+                'followers' => max((int)$inf['primary_followers'], (int)$inf['platform_followers']),
+                'categories' => $inf['categories'] ? explode(',', $inf['categories']) : []
+            ];
+        }, $influencers)
+    ]);
+}
 
 apiError('Invalid action');

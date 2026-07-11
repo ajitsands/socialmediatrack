@@ -14,7 +14,7 @@ if ($action === 'list') {
                u.status, u.created_at, u.profile_locked,
                COUNT(DISTINCT c.id) as total_campaigns,
                COUNT(DISTINCT e.id) as total_conversions,
-               GROUP_CONCAT(DISTINCT CONCAT(up.platform, ':', IFNULL(up.social_handle, '')) SEPARATOR ',') as platforms_list,
+               GROUP_CONCAT(DISTINCT CONCAT(up.platform, ':', IFNULL(up.social_handle, ''), ':', IFNULL(up.follower_count, 0)) SEPARATOR ',') as platforms_list,
                GROUP_CONCAT(DISTINCT ic.name SEPARATOR ',') as categories_list
         FROM users u
         LEFT JOIN user_platforms up ON up.user_id = u.id
@@ -38,7 +38,7 @@ if ($action === 'get') {
     if (!$user) apiError('Influencer not found', 404);
 
     // Get platforms list
-    $platStmt = $db->prepare("SELECT platform, social_handle as handle FROM user_platforms WHERE user_id = ?");
+    $platStmt = $db->prepare("SELECT platform, social_handle as handle, follower_count as followers FROM user_platforms WHERE user_id = ?");
     $platStmt->execute([$id]);
     $user['platforms'] = $platStmt->fetchAll();
 
@@ -82,12 +82,13 @@ if ($action === 'create') {
 
     // Insert all platforms
     if (!empty($plats)) {
-        $ins = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle) VALUES (?, ?, ?)");
+        $ins = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle, follower_count) VALUES (?, ?, ?, ?)");
         foreach ($plats as $p) {
             $pName = sanitize($p['platform'] ?? '');
             $pHand = sanitize($p['handle'] ?? '');
+            $pFollowers = (int)($p['followers'] ?? 0);
             if ($pName) {
-                $ins->execute([$newId, $pName, $pHand]);
+                $ins->execute([$newId, $pName, $pHand, $pFollowers]);
             }
         }
     }
@@ -144,12 +145,13 @@ if ($action === 'update') {
     // Refresh platforms
     $db->prepare("DELETE FROM user_platforms WHERE user_id = ?")->execute([$id]);
     if (!empty($plats)) {
-        $ins = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle) VALUES (?, ?, ?)");
+        $ins = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle, follower_count) VALUES (?, ?, ?, ?)");
         foreach ($plats as $p) {
             $pName = sanitize($p['platform'] ?? '');
             $pHand = sanitize($p['handle'] ?? '');
+            $pFollowers = (int)($p['followers'] ?? 0);
             if ($pName) {
-                $ins->execute([$id, $pName, $pHand]);
+                $ins->execute([$id, $pName, $pHand, $pFollowers]);
             }
         }
     }

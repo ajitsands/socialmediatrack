@@ -159,6 +159,7 @@ App.api = (function ($) {
     create:        function (fd)   { return _requestMultipart('client_products', 'create', fd); },
     update:        function (fd)   { return _requestMultipart('client_products', 'update', fd); },
     delete:        function (id)   { return _request('client_products', 'delete', {id: id}, 'POST'); },
+    influencers:   function ()     { return _request('client_products', 'influencers', {}, 'GET'); },
   };
 
   /* ── Analytics ───────────────────────────── */

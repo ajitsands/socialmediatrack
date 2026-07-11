@@ -200,9 +200,11 @@ App.Admin.Influencers = (function ($) {
                   var parts = platItem.split(':');
                   var plat = parts[0];
                   var handle = parts[1] || '';
+                  var followers = parts[2] ? parseInt(parts[2]) : 0;
                   if (plat) {
                     var icon = platformIcons[plat] || '🌐';
-                    html += `<span class="badge platform-${plat}" title="${handle}" style="font-size:0.75rem;padding:2px 8px">${icon} ${plat}</span>`;
+                    var folText = followers > 0 ? ` (${followers.toLocaleString()})` : '';
+                    html += `<span class="badge platform-${plat}" title="${handle}" style="font-size:0.75rem;padding:2px 8px">${icon} ${plat}${folText}</span>`;
                   }
                 });
                 html += '</div>';
@@ -229,12 +231,13 @@ App.Admin.Influencers = (function ($) {
       .fail(App.api.handleError);
   }
 
-  function addPlatformRow(plat, handle) {
+  function addPlatformRow(plat, handle, followers) {
     plat = plat || 'instagram';
     handle = handle || '';
+    followers = followers !== undefined ? followers : '';
     var rowHtml = `
       <div class="platform-row" style="display:flex;gap:10px;align-items:center">
-        <select class="form-control row-platform" style="flex:1">
+        <select class="form-control row-platform" style="flex:1.2">
           <option value="instagram" ${plat === 'instagram' ? 'selected' : ''}>📸 Instagram</option>
           <option value="tiktok" ${plat === 'tiktok' ? 'selected' : ''}>🎵 TikTok</option>
           <option value="youtube" ${plat === 'youtube' ? 'selected' : ''}>▶️ YouTube</option>
@@ -242,7 +245,8 @@ App.Admin.Influencers = (function ($) {
           <option value="twitter" ${plat === 'twitter' ? 'selected' : ''}>🐦 Twitter / X</option>
           <option value="other" ${plat === 'other' ? 'selected' : ''}>🌐 Other</option>
         </select>
-        <input type="text" class="form-control row-handle" style="flex:1" placeholder="@username" value="${handle}">
+        <input type="text" class="form-control row-handle" style="flex:1.2" placeholder="@username" value="${handle}">
+        <input type="number" class="form-control row-followers" style="width:110px" placeholder="Followers" min="0" value="${followers}">
         <button type="button" class="btn btn-danger btn-sm btn-remove-platform-row" style="padding:6px 10px">✕</button>
       </div>`;
     $('#platform-rows-container').append(rowHtml);
@@ -337,7 +341,7 @@ App.Admin.Influencers = (function ($) {
         $('#platform-rows-container').empty();
         if (r.platforms && r.platforms.length > 0) {
           r.platforms.forEach(function(plat){
-            addPlatformRow(plat.platform, plat.handle);
+            addPlatformRow(plat.platform, plat.handle, plat.followers);
           });
         } else {
           addPlatformRow();
@@ -357,8 +361,9 @@ App.Admin.Influencers = (function ($) {
       $('.platform-row').each(function(){
         var pName = $(this).find('.row-platform').val();
         var pHand = $(this).find('.row-handle').val().trim();
+        var pFollowers = parseInt($(this).find('.row-followers').val() || 0);
         if (pName) {
-          platformsList.push({ platform: pName, handle: pHand });
+          platformsList.push({ platform: pName, handle: pHand, followers: pFollowers });
         }
       });
 

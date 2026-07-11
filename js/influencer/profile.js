@@ -119,7 +119,7 @@ App.Influencer.Profile = (function ($) {
               </div>
             </div>
 
-            <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom:24px">
+            <div class="grid-3" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom:24px">
               <div class="form-group">
                 <label class="form-label">Primary Platform</label>
                 <select class="form-control" id="profile-platform" style="width:100%">
@@ -134,6 +134,10 @@ App.Influencer.Profile = (function ($) {
               <div class="form-group">
                 <label class="form-label">Social Handle</label>
                 <input type="text" class="form-control" id="profile-social-handle" placeholder="@username" style="width:100%">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Followers Count</label>
+                <input type="number" class="form-control" id="profile-followers" min="0" placeholder="e.g. 5000" style="width:100%">
               </div>
             </div>
 
@@ -201,6 +205,7 @@ App.Influencer.Profile = (function ($) {
         $('#profile-phone').val(user.phone || '');
         $('#profile-platform').val(user.platform || 'instagram');
         $('#profile-social-handle').val(user.social_handle || '');
+        $('#profile-followers').val(user.follower_count || 0);
 
         if (parseInt(user.profile_locked) === 1) {
           $('#profile-name').prop('disabled', true).css({
@@ -297,6 +302,7 @@ App.Influencer.Profile = (function ($) {
         country_code: $('#profile-country-code').val(),
         platform: $('#profile-platform').val(),
         social_handle: $('#profile-social-handle').val(),
+        follower_count: parseInt($('#profile-followers').val() || 0),
         avatar_base64: _croppedImageBase64
       };
 

@@ -40,7 +40,7 @@ if ($action === 'logout') {
 if ($action === 'me') {
     requireAuth();
     $db   = getDB();
-    $stmt = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at,follower_count FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user) apiError('User not found', 404);
@@ -93,8 +93,10 @@ if ($action === 'update_profile') {
         }
     }
 
-    $sql = "UPDATE users SET name = ?, phone = ?, country_code = ?, platform = ?, social_handle = ?";
-    $params = [$name, $phone, $cc, $plat, $handle];
+    $followerCount = (int)($input['follower_count'] ?? 0);
+
+    $sql = "UPDATE users SET name = ?, phone = ?, country_code = ?, platform = ?, social_handle = ?, follower_count = ?";
+    $params = [$name, $phone, $cc, $plat, $handle, $followerCount];
     if ($avatarPath) {
         $sql .= ", avatar = ?";
         $params[] = $avatarPath;
@@ -106,7 +108,7 @@ if ($action === 'update_profile') {
     $stmt->execute($params);
 
     // Refresh user details to return
-    $get = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at FROM users WHERE id = ?");
+    $get = $db->prepare("SELECT id,name,email,role,phone,country_code,social_handle,platform,status,avatar,profile_locked,created_at,follower_count FROM users WHERE id = ?");
     $get->execute([$userId]);
     $user = $get->fetch();
 
