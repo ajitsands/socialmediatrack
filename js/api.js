@@ -153,6 +153,7 @@ App.api = (function ($) {
 
   /* ── Client Products ─────────────────────── */
   var clientProducts = {
+    categories:    function ()     { return _request('client_products', 'categories', {}, 'GET'); },
     list:          function ()     { return _request('client_products', 'list', {}, 'GET'); },
     get:           function (id)   { return _request('client_products', 'get', {id: id}, 'GET'); },
     create:        function (fd)   { return _requestMultipart('client_products', 'create', fd); },

@@ -74,7 +74,26 @@ if ($action === 'by_product') {
         ORDER BY total_conversions DESC
     ");
     $stmt->execute([$clientId]);
-    apiSuccess($stmt->fetchAll());
+    $products = $stmt->fetchAll();
+
+    $cfg    = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
+    $cfgCpc = 0.000;
+    $cfgCpl = 0.000;
+    if ($cfg) {
+        if (isset($cfg['vendor_clicks_per_point']) && (int)$cfg['vendor_clicks_per_point'] > 0) {
+            $cfgCpc = round((float)$cfg['vendor_click_value_per_point'] / (int)$cfg['vendor_clicks_per_point'], 3);
+        }
+        if (isset($cfg['vendor_conversions_per_point']) && (int)$cfg['vendor_conversions_per_point'] > 0) {
+            $cfgCpl = round((float)$cfg['vendor_conversion_value_per_point'] / (int)$cfg['vendor_conversions_per_point'], 3);
+        }
+    }
+
+    foreach ($products as &$p) {
+        $p['cpc_rate'] = ((float)$p['cpc_rate'] > 0) ? (float)$p['cpc_rate'] : $cfgCpc;
+        $p['cpl_rate'] = ((float)$p['cpl_rate'] > 0) ? (float)$p['cpl_rate'] : $cfgCpl;
+    }
+
+    apiSuccess($products);
 }
 
 // ─── Best Performing Influencers ──────────────

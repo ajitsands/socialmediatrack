@@ -160,7 +160,7 @@ header("Pragma: no-cache");
 <script src="js/i18n.js?v=1.2.6"></script>
 <script src="js/countries.js?v=1.2.6"></script>
 <script src="js/auth.js?v=1.2.6"></script>
-<script src="js/api.js?v=1.2.8"></script>
+<script src="js/api.js?v=1.2.9"></script>
 
 <!-- Admin modules -->
 <script src="js/admin/dashboard.js?v=1.2.6"></script>
@@ -179,7 +179,7 @@ header("Pragma: no-cache");
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.2.6"></script>
-<script src="js/client/products.js?v=1.2.8"></script>
+<script src="js/client/products.js?v=1.3.0"></script>
 <script src="js/client/crm.js?v=1.2.6"></script>
 <script src="js/client/wallet.js?v=1.2.6"></script>
 

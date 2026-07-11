@@ -93,20 +93,40 @@ function saveVideoFile($fileField, $subDir = 'uploads/products/videos/') {
     return $subDir . $filename;
 }
 
+
 // Helper: Get effective CPC/CPL for this product.
 // If admin has set a non-zero product-level rate, use it; otherwise use points_config.
 function getEffectiveRates($db, $prodCpc = 0, $prodCpl = 0) {
     $cfg    = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
-    $cfgCpc = $cfg ? (float)$cfg['click_value_per_point']             : 0.001;
-    $cfgCpl = $cfg ? (float)$cfg['vendor_conversion_value_per_point'] : 0.020;
+    $cfgCpc = 0.000;
+    $cfgCpl = 0.000;
+    if ($cfg) {
+        if (isset($cfg['vendor_clicks_per_point']) && (int)$cfg['vendor_clicks_per_point'] > 0) {
+            $cfgCpc = round((float)$cfg['vendor_click_value_per_point'] / (int)$cfg['vendor_clicks_per_point'], 3);
+        }
+        if (isset($cfg['vendor_conversions_per_point']) && (int)$cfg['vendor_conversions_per_point'] > 0) {
+            $cfgCpl = round((float)$cfg['vendor_conversion_value_per_point'] / (int)$cfg['vendor_conversions_per_point'], 3);
+        }
+    }
     return [
         'cpc_rate' => ((float)$prodCpc > 0) ? (float)$prodCpc : $cfgCpc,
         'cpl_rate' => ((float)$prodCpl > 0) ? (float)$prodCpl : $cfgCpl,
     ];
 }
 
+// ─── Categories (for client dropdowns) ───────
+if ($action === 'categories') {
+    $stmt = $db->query("SELECT id, name FROM influencer_categories ORDER BY name ASC");
+    apiSuccess($stmt->fetchAll());
+}
+
 // ─── List Products ────────────────────────────
+
 if ($action === 'list') {
+    $rates = getEffectiveRates($db, 0, 0);
+    $cfgCpc = $rates['cpc_rate'];
+    $cfgCpl = $rates['cpl_rate'];
+
     $stmt = $db->prepare("
         SELECT p.id, p.name, p.category, p.description, p.price, p.cpc_rate, p.cpl_rate, p.currency, p.image_url, p.image_url_1, p.image_url_2, p.image_url_3, p.video_url, p.display_platform, p.status, p.created_at,
                COUNT(DISTINCT c.id) as campaign_count,
@@ -120,7 +140,12 @@ if ($action === 'list') {
         ORDER BY p.created_at DESC
     ");
     $stmt->execute([$clientId]);
-    apiSuccess($stmt->fetchAll());
+    $products = $stmt->fetchAll();
+    foreach ($products as &$p) {
+        $p['cpc_rate'] = ((float)$p['cpc_rate'] > 0) ? (float)$p['cpc_rate'] : $cfgCpc;
+        $p['cpl_rate'] = ((float)$p['cpl_rate'] > 0) ? (float)$p['cpl_rate'] : $cfgCpl;
+    }
+    apiSuccess($products);
 }
 
 // ─── Get Single Product ───────────────────────
@@ -130,6 +155,11 @@ if ($action === 'get') {
     $stmt->execute([$id, $clientId]);
     $prod = $stmt->fetch();
     if (!$prod) apiError('Product not found', 404);
+    
+    $rates = getEffectiveRates($db, $prod['cpc_rate'], $prod['cpl_rate']);
+    $prod['cpc_rate'] = $rates['cpc_rate'];
+    $prod['cpl_rate'] = $rates['cpl_rate'];
+    
     apiSuccess($prod);
 }
 
@@ -148,10 +178,9 @@ if ($action === 'create') {
     if ($price < 0) apiError('Price cannot be negative.');
     if (!$pUrl)  apiError('Product URL is required.');
 
-    // CPC/CPL always come from admin points_config — client cannot set these
-    $rates   = getEffectiveRates($db, 0, 0);
-    $cpcRate = $rates['cpc_rate'];
-    $cplRate = $rates['cpl_rate'];
+    // CPC/CPL always start at 0.000 — client cannot set these, and 0 tells the system to use default Points Config values
+    $cpcRate = 0.000;
+    $cplRate = 0.000;
 
     // Save images
     $img1 = saveBase64Image($input['image_1'] ?? null);
@@ -202,11 +231,9 @@ if ($action === 'update') {
     if ($price < 0) apiError('Price cannot be negative.');
     if (!$pUrl)  apiError('Product URL is required.');
 
-    // CPC/CPL: If admin has set a product-level override (non-zero), keep it.
-    // Otherwise, pull latest from points_config. Client cannot set these.
-    $rates   = getEffectiveRates($db, $existingProd['cpc_rate'], $existingProd['cpl_rate']);
-    $cpcRate = $rates['cpc_rate'];
-    $cplRate = $rates['cpl_rate'];
+    // CPC/CPL: Client cannot change these, so keep the existing raw database values (0 or whatever override was set by admin)
+    $cpcRate = (float)$existingProd['cpc_rate'];
+    $cplRate = (float)$existingProd['cpl_rate'];
 
     // Process images: if not passed, use existing value
     $img1 = isset($input['image_1']) ? saveBase64Image($input['image_1']) : $existingProd['image_url_1'];

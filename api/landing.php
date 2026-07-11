@@ -158,11 +158,13 @@ if ($action === 'click') {
 
         if ($prodRate && $prodRate['client_id'] !== null) {
             $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
-            $cpc = 0.000;
-            if ($cfg && isset($cfg['vendor_clicks_per_point']) && (int)$cfg['vendor_clicks_per_point'] > 0) {
-                $cpc = round((float)$cfg['vendor_click_value_per_point'] / (int)$cfg['vendor_clicks_per_point'], 3);
-            } else {
-                $cpc = (float)$prodRate['cpc_rate'];
+            $cpc = (float)$prodRate['cpc_rate'];
+            if ($cpc <= 0) {
+                if ($cfg && isset($cfg['vendor_clicks_per_point']) && (int)$cfg['vendor_clicks_per_point'] > 0) {
+                    $cpc = round((float)$cfg['vendor_click_value_per_point'] / (int)$cfg['vendor_clicks_per_point'], 3);
+                } else {
+                    $cpc = 0.000;
+                }
             }
 
             if ($cpc > 0 && (float)$prodRate['wallet_balance'] >= 0.100) {
@@ -266,11 +268,13 @@ if ($action === 'convert') {
     // Client Wallet CPL Deduction
     $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch();
     if ($camp['client_id'] !== null) {
-        $cpl = 0.000;
-        if ($cfg && isset($cfg['vendor_conversions_per_point']) && (int)$cfg['vendor_conversions_per_point'] > 0) {
-            $cpl = round((float)$cfg['vendor_conversion_value_per_point'] / (int)$cfg['vendor_conversions_per_point'], 3);
-        } else {
-            $cpl = (float)$camp['cpl_rate'];
+        $cpl = (float)$camp['cpl_rate'];
+        if ($cpl <= 0) {
+            if ($cfg && isset($cfg['vendor_conversions_per_point']) && (int)$cfg['vendor_conversions_per_point'] > 0) {
+                $cpl = round((float)$cfg['vendor_conversion_value_per_point'] / (int)$cfg['vendor_conversions_per_point'], 3);
+            } else {
+                $cpl = 0.000;
+            }
         }
 
         if ($cpl > 0 && (float)$camp['wallet_balance'] >= 0.100) {

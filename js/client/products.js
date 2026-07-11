@@ -16,6 +16,7 @@ App.Client.Products = (function ($) {
 
   var _adminCpcRate = 0;
   var _adminCplRate = 0;
+  var _adminCurrency = 'BHD';
 
   function init() {
     render();
@@ -31,14 +32,14 @@ App.Client.Products = (function ($) {
         var d = res.data || {};
         _adminCpcRate = parseFloat(d.cpc_rate || 0);
         _adminCplRate = parseFloat(d.cpl_rate || 0);
-        var cur = d.currency || 'BHD';
-        $('#prod-cpc-display').text(_adminCpcRate.toFixed(3) + ' ' + cur + ' per click');
-        $('#prod-cpl-display').text(_adminCplRate.toFixed(3) + ' ' + cur + ' per lead');
+        _adminCurrency = d.currency || 'BHD';
+        $('#prod-cpc-display').text(_adminCpcRate.toFixed(3) + ' ' + _adminCurrency + ' per click');
+        $('#prod-cpl-display').text(_adminCplRate.toFixed(3) + ' ' + _adminCurrency + ' per lead');
       });
   }
 
   function loadCategories() {
-    App.api.users.categories()
+    App.api.clientProducts.categories()
       .done(function (res) {
         var opts = '<option value="">— Select Category —</option>';
         (res.data || []).forEach(function (c) {
@@ -318,6 +319,10 @@ App.Client.Products = (function ($) {
       $('#prod-id').val('');
       $('#modal-product-title').text('📦 Add New Product');
       
+      // Reset displays to system default rates
+      $('#prod-cpc-display').text(_adminCpcRate.toFixed(3) + ' ' + _adminCurrency + ' per click');
+      $('#prod-cpl-display').text(_adminCplRate.toFixed(3) + ' ' + _adminCurrency + ' per lead');
+
       // Reset upload preview slots
       $('.image-upload-slot').each(function () {
         $(this).find('.slot-placeholder').show();
@@ -478,8 +483,6 @@ App.Client.Products = (function ($) {
       fd.append('description', $('#prod-desc').val().trim());
       fd.append('price', $('#prod-price').val());
       fd.append('currency', $('#prod-currency').val());
-      fd.append('cpc_rate', $('#prod-cpc').val());
-      fd.append('cpl_rate', $('#prod-cpl').val());
       fd.append('product_url', $('#prod-url').val().trim());
       fd.append('demo_url', $('#prod-demo').val().trim());
       fd.append('display_platform', $('#prod-display-platform').val());
@@ -535,8 +538,9 @@ App.Client.Products = (function ($) {
           $('#prod-desc').val(p.description || '');
           $('#prod-currency').val(p.currency);
           $('#prod-price').val(parseFloat(p.price).toFixed(3));
-          $('#prod-cpc').val(parseFloat(p.cpc_rate).toFixed(3));
-          $('#prod-cpl').val(parseFloat(p.cpl_rate).toFixed(3));
+          var cur = p.currency || 'BHD';
+          $('#prod-cpc-display').text(parseFloat(p.cpc_rate).toFixed(3) + ' ' + cur + ' per click');
+          $('#prod-cpl-display').text(parseFloat(p.cpl_rate).toFixed(3) + ' ' + cur + ' per lead');
           $('#prod-url').val(p.product_url);
           $('#prod-demo').val(p.demo_url || '');
           $('#prod-display-platform').val(p.display_platform || 'instagram');
