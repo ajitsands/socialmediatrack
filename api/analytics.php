@@ -359,7 +359,13 @@ if ($action === 'insights') {
     }
     $clientWhereStr = implode(' AND ', $clientWhere);
     
-    $clientsWithBalance = (int)$db->query("SELECT COUNT(*) FROM users WHERE role = 'client' AND status = 'active' AND wallet_balance > 0")->fetchColumn();
+    $fundedCountStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE $clientWhereStr AND wallet_balance > 0");
+    $fundedCountStmt->execute($clientParams);
+    $clientsWithBalance = (int)$fundedCountStmt->fetchColumn();
+
+    $sumStmt = $db->prepare("SELECT SUM(wallet_balance) FROM users WHERE $clientWhereStr");
+    $sumStmt->execute($clientParams);
+    $totalClientsBalance = round((float)$sumStmt->fetchColumn(), 3);
 
     $clientsStmt = $db->prepare("
         SELECT id, name, company_category, wallet_balance 
@@ -377,6 +383,7 @@ if ($action === 'insights') {
         'stats' => [
             'running_campaigns' => $runningCampaigns,
             'clients_with_balance' => $clientsWithBalance,
+            'total_clients_balance' => $totalClientsBalance,
             'total_client_charge' => round($totalClientCharge, 3),
             'total_influencer_payout' => round($totalInfluencerPayout, 3),
             'total_admin_profit' => round($totalClientCharge - $totalInfluencerPayout, 3),

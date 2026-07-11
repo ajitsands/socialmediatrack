@@ -86,8 +86,8 @@ App.Admin.Insights = (function ($) {
         <div class="stat-card blue">
           <div class="stat-icon">🏢</div>
           <div class="stat-info">
-            <div class="stat-value" id="kpi-funded-clients">0</div>
-            <div class="stat-label">Clients with Balance</div>
+            <div class="stat-value" id="kpi-funded-clients" style="font-size:1.45rem">0.000 BHD</div>
+            <div class="stat-label">Total Clients Balance</div>
           </div>
         </div>
 
@@ -241,7 +241,7 @@ App.Admin.Insights = (function ($) {
 
         // Populate KPI stats
         $('#kpi-running-campaigns').text(s.running_campaigns);
-        $('#kpi-funded-clients').text(s.clients_with_balance);
+        $('#kpi-funded-clients').text(parseFloat(s.total_clients_balance).toFixed(3) + ' BHD');
         $('#kpi-client-charge').text(parseFloat(s.total_client_charge).toFixed(3) + ' BHD');
         $('#kpi-influencer-payout').text(parseFloat(s.total_influencer_payout).toFixed(3) + ' BHD');
         
