@@ -332,7 +332,19 @@ if ($existingCats == 0) {
     }
 
     // Add new categories with emojis if they don't exist
-    $newCats = ['⚽ Sports', '🎮 Gaming', '🎵 Music / Art'];
+    $newCats = [
+        '⚽ Sports',
+        '🎮 Gaming',
+        '🎵 Music / Art',
+        '🏨 Hotels',
+        '💅 Salon & Spa',
+        '🏥 Health & Medical',
+        '🎓 Education',
+        '🏠 Real Estate',
+        '🚗 Automotive',
+        '🛒 Retail & Shopping',
+        '🍽️ Restaurants',
+    ];
     foreach ($newCats as $name) {
         $chk = $db->prepare("SELECT COUNT(*) FROM influencer_categories WHERE name = ?");
         $chk->execute([$name]);

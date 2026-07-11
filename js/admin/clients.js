@@ -15,7 +15,19 @@ App.Admin.Clients = (function ($) {
     if (!App.auth.requireAuth('admin')) return;
     render();
     loadTable();
+    loadCategories();
     bindEvents();
+  }
+
+  function loadCategories() {
+    App.api.users.categories()
+      .done(function (res) {
+        var opts = '<option value="">— Select Category —</option>';
+        (res.data || []).forEach(function (c) {
+          opts += '<option value="' + c.name + '">' + c.name + '</option>';
+        });
+        $('#client-company-category').html(opts);
+      });
   }
 
   function render() {
@@ -97,13 +109,7 @@ App.Admin.Clients = (function ($) {
                   <div class="form-group">
                     <label class="form-label">Company Category <span class="req">*</span></label>
                     <select class="form-control" id="client-company-category" required>
-                      <option value="">— Select Category —</option>
-                      <option value="Foody">🍔 Foody</option>
-                      <option value="Hotels">🏨 Hotels</option>
-                      <option value="Clothing">👗 Clothing</option>
-                      <option value="Electronics">📱 Electronics</option>
-                      <option value="Services">🛠️ Services</option>
-                      <option value="Other">📦 Other</option>
+                      <option value="">Loading categories...</option>
                     </select>
                   </div>
                 </div>

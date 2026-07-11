@@ -16,8 +16,20 @@ App.Client.Products = (function ($) {
 
   function init() {
     render();
+    loadCategories();
     loadTable();
     bindEvents();
+  }
+
+  function loadCategories() {
+    App.api.users.categories()
+      .done(function (res) {
+        var opts = '<option value="">— Select Category —</option>';
+        (res.data || []).forEach(function (c) {
+          opts += '<option value="' + c.name + '">' + c.name + '</option>';
+        });
+        $('#prod-category').html(opts);
+      });
   }
 
   function render() {
@@ -74,13 +86,7 @@ App.Client.Products = (function ($) {
                 <div class="form-group">
                   <label class="form-label">Category <span class="req">*</span></label>
                   <select class="form-control" id="prod-category" required>
-                    <option value="">— Select Category —</option>
-                    <option value="Foody">🍔 Foody</option>
-                    <option value="Hotels">🏨 Hotels</option>
-                    <option value="Clothing">👗 Clothing</option>
-                    <option value="Electronics">📱 Electronics</option>
-                    <option value="Services">🛠️ Services</option>
-                    <option value="Other">📦 Other</option>
+                    <option value="">Loading categories...</option>
                   </select>
                 </div>
               </div>
