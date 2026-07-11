@@ -247,12 +247,15 @@ App.Influencer.Campaigns = (function ($) {
                   <th>Product URL</th>
                   <th>Platform</th>
                   <th>Offer Discount</th>
+                  <th>Clicks</th>
+                  <th>Conversions</th>
+                  <th>Rate</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="tbl-incoming-requests-body">
-                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
+                <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
               </tbody>
             </table>
           </div>
@@ -341,7 +344,7 @@ App.Influencer.Campaigns = (function ($) {
       var data = res.data || [];
       var rows = '';
       if (data.length === 0) {
-        rows = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
+        rows = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
       } else {
         data.forEach(function(r, idx){
           var platIcons = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐'};
@@ -353,6 +356,10 @@ App.Influencer.Campaigns = (function ($) {
             discountHtml = '<span class="badge badge-muted">None</span>';
           }
           
+          var clicks = parseInt(r.total_clicks || 0);
+          var conversions = parseInt(r.total_conversions || 0);
+          var rate = clicks > 0 ? ((conversions / clicks) * 100).toFixed(1) : '0.0';
+
           var actionsHtml = '';
           var statusHtml = '';
           if (r.status === 'pending') {
@@ -386,6 +393,9 @@ App.Influencer.Campaigns = (function ($) {
               <td><a href="${r.product_url}" target="_blank" class="badge badge-muted" style="text-decoration:none;color:var(--primary);font-weight:700">🌐 Visit URL ↗</a></td>
               <td><span class="badge platform-${r.platform}">${icon} ${r.platform.toUpperCase()}</span></td>
               <td><strong class="badge badge-accent">${discountHtml}</strong></td>
+              <td><span style="color:var(--info);font-weight:700">${clicks}</span></td>
+              <td><span style="color:var(--success);font-weight:700">${conversions}</span></td>
+              <td><span style="font-weight:700;color:${rate>=10?'var(--success)':rate>=5?'var(--warning)':'var(--danger)'}">${rate}%</span></td>
               <td>${statusHtml}</td>
               <td>${actionsHtml}</td>
             </tr>

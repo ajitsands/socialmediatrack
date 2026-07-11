@@ -287,11 +287,18 @@ if ($action === 'list_requests') {
         // Return requests directed to this influencer
         $stmt = $db->prepare("
             SELECT cr.*, p.name as product_name, p.category as product_category, p.product_url, p.image_url,
-                   c.name as client_name, c.email as client_email
+                   c.name as client_name, c.email as client_email,
+                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id
             JOIN users c ON c.id = cr.client_id
+            LEFT JOIN campaigns camp ON camp.influencer_id = cr.influencer_id 
+                                     AND camp.product_id = cr.product_id 
+                                     AND camp.platform = cr.platform
+            LEFT JOIN events e ON e.campaign_id = camp.id
             WHERE cr.influencer_id = ?
+            GROUP BY cr.id
             ORDER BY cr.created_at DESC
         ");
         $stmt->execute([$sess['user_id']]);
@@ -300,11 +307,18 @@ if ($action === 'list_requests') {
         // Return requests sent by this client
         $stmt = $db->prepare("
             SELECT cr.*, p.name as product_name, p.image_url,
-                   i.name as influencer_name, i.social_handle
+                   i.name as influencer_name, i.social_handle,
+                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id
             JOIN users i ON i.id = cr.influencer_id
+            LEFT JOIN campaigns camp ON camp.influencer_id = cr.influencer_id 
+                                     AND camp.product_id = cr.product_id 
+                                     AND camp.platform = cr.platform
+            LEFT JOIN events e ON e.campaign_id = camp.id
             WHERE cr.client_id = ?
+            GROUP BY cr.id
             ORDER BY cr.created_at DESC
         ");
         $stmt->execute([$sess['user_id']]);
@@ -313,11 +327,18 @@ if ($action === 'list_requests') {
         // Admin: return all requests
         $stmt = $db->query("
             SELECT cr.*, p.name as product_name, p.image_url,
-                   i.name as influencer_name, c.name as client_name
+                   i.name as influencer_name, c.name as client_name,
+                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id
             JOIN users i ON i.id = cr.influencer_id
             JOIN users c ON c.id = cr.client_id
+            LEFT JOIN campaigns camp ON camp.influencer_id = cr.influencer_id 
+                                     AND camp.product_id = cr.product_id 
+                                     AND camp.platform = cr.platform
+            LEFT JOIN events e ON e.campaign_id = camp.id
+            GROUP BY cr.id
             ORDER BY cr.created_at DESC
         ");
         apiSuccess($stmt->fetchAll());

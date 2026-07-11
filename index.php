@@ -173,7 +173,7 @@ header("Pragma: no-cache");
 <script src="js/admin/wallet.js?v=1.2.6"></script>
 
 <!-- Influencer modules -->
-<script src="js/influencer/dashboard.js?v=1.2.7"></script>
+<script src="js/influencer/dashboard.js?v=1.2.8"></script>
 <script src="js/influencer/wallet.js?v=1.2.6"></script>
 <script src="js/influencer/profile.js?v=1.3.1"></script>
 
