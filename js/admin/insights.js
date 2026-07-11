@@ -226,9 +226,7 @@ App.Admin.Insights = (function ($) {
     App.api.users.list().done(function(res){
       var select = $('#insights-filter-influencer');
       res.data.forEach(function(u){
-        if (u.role === 'influencer') {
-          select.append(`<option value="${u.id}">${u.name} (${u.social_handle || 'no handle'})</option>`);
-        }
+        select.append(`<option value="${u.id}">${u.name}</option>`);
       });
     });
   }
