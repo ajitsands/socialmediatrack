@@ -171,6 +171,23 @@ App.Influencer.Profile = (function ($) {
 
       </div>
 
+      <!-- Social Media Accounts Card (full width) -->
+      <div class="card" style="margin-top:32px">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <span class="card-title">📱 My Social Media Accounts</span>
+          <button class="btn btn-secondary btn-sm" id="btn-add-platform-row-profile">➕ Add Account</button>
+        </div>
+        <div class="card-body">
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px 0">Add each social media platform you are active on and enter your current follower count. Clients use this to find the right match.</p>
+          <div id="profile-platform-rows" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+            <!-- Dynamic rows go here -->
+          </div>
+          <button class="btn btn-primary" id="btn-save-platforms" style="font-weight:600">
+            💾 Save Social Media Accounts
+          </button>
+        </div>
+      </div>
+
       <!-- Image Cropping Modal Backdrop -->
       <div class="modal-backdrop" id="modal-avatar-crop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center">
         <div class="card" style="width:100%; max-width:550px; margin:20px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.3)">
@@ -207,6 +224,18 @@ App.Influencer.Profile = (function ($) {
         $('#profile-social-handle').val(user.social_handle || '');
         $('#profile-followers').val(user.follower_count || 0);
 
+        // Populate multi-platform rows
+        var $rows = $('#profile-platform-rows');
+        $rows.empty();
+        var platforms = user.platforms || [];
+        if (platforms.length === 0) {
+          addProfilePlatformRow();
+        } else {
+          platforms.forEach(function(p) {
+            addProfilePlatformRow(p.platform, p.handle, p.followers);
+          });
+        }
+
         if (parseInt(user.profile_locked) === 1) {
           $('#profile-name').prop('disabled', true).css({
             'background': 'var(--border-light)',
@@ -222,6 +251,28 @@ App.Influencer.Profile = (function ($) {
         }
       })
       .fail(App.api.handleError);
+  }
+
+  function addProfilePlatformRow(plat, handle, followers) {
+    plat = plat || 'instagram';
+    handle = handle || '';
+    followers = followers !== undefined ? followers : '';
+    var icons = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐' };
+    var rowHtml = `
+      <div class="profile-platform-row" style="display:grid;grid-template-columns:180px 1fr 160px auto;gap:10px;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--table-stripe)">
+        <select class="form-control prow-platform" style="font-size:0.9rem">
+          <option value="instagram" ${plat==='instagram'?'selected':''}>📸 Instagram</option>
+          <option value="tiktok" ${plat==='tiktok'?'selected':''}>🎵 TikTok</option>
+          <option value="youtube" ${plat==='youtube'?'selected':''}>▶️ YouTube</option>
+          <option value="facebook" ${plat==='facebook'?'selected':''}>👍 Facebook</option>
+          <option value="twitter" ${plat==='twitter'?'selected':''}>🐦 Twitter / X</option>
+          <option value="other" ${plat==='other'?'selected':''}>🌐 Other</option>
+        </select>
+        <input type="text" class="form-control prow-handle" value="${handle}" placeholder="@username or profile URL" style="font-size:0.9rem">
+        <input type="number" class="form-control prow-followers" value="${followers}" min="0" placeholder="Followers" style="font-size:0.9rem">
+        <button type="button" class="btn btn-danger btn-sm btn-remove-profile-platform" title="Remove" style="padding:6px 10px">🗑️</button>
+      </div>`;
+    $('#profile-platform-rows').append(rowHtml);
   }
 
   function bindEvents() {
@@ -330,6 +381,40 @@ App.Influencer.Profile = (function ($) {
         })
         .fail(function (err) {
           $btn.prop('disabled', false).html('💾 Save Profile Details');
+          App.api.handleError(err);
+        });
+    });
+
+    // Add Social Media Account Row
+    $(document).off('click', '#btn-add-platform-row-profile').on('click', '#btn-add-platform-row-profile', function() {
+      addProfilePlatformRow();
+    });
+
+    // Remove platform row
+    $(document).off('click', '.btn-remove-profile-platform').on('click', '.btn-remove-profile-platform', function() {
+      $(this).closest('.profile-platform-row').remove();
+    });
+
+    // Save Social Media Accounts
+    $(document).off('click', '#btn-save-platforms').on('click', '#btn-save-platforms', function() {
+      var platforms = [];
+      $('.profile-platform-row').each(function() {
+        var pName = $(this).find('.prow-platform').val();
+        var pHand = $(this).find('.prow-handle').val().trim();
+        var pFol  = parseInt($(this).find('.prow-followers').val() || 0);
+        if (pName) {
+          platforms.push({ platform: pName, handle: pHand, followers: pFol });
+        }
+      });
+
+      var $btn = $(this).prop('disabled', true).text('Saving…');
+      App.api.auth.savePlatforms(platforms)
+        .done(function() {
+          $btn.prop('disabled', false).html('💾 Save Social Media Accounts');
+          Swal.fire({ icon: 'success', title: 'Saved!', text: 'Your social media accounts have been updated.', timer: 2000, showConfirmButton: false });
+        })
+        .fail(function(err) {
+          $btn.prop('disabled', false).html('💾 Save Social Media Accounts');
           App.api.handleError(err);
         });
     });

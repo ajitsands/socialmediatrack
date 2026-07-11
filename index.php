@@ -160,7 +160,7 @@ header("Pragma: no-cache");
 <script src="js/i18n.js?v=1.2.6"></script>
 <script src="js/countries.js?v=1.2.6"></script>
 <script src="js/auth.js?v=1.2.6"></script>
-<script src="js/api.js?v=1.2.9"></script>
+<script src="js/api.js?v=1.3.0"></script>
 
 <!-- Admin modules -->
 <script src="js/admin/dashboard.js?v=1.2.6"></script>
@@ -175,7 +175,7 @@ header("Pragma: no-cache");
 <!-- Influencer modules -->
 <script src="js/influencer/dashboard.js?v=1.2.6"></script>
 <script src="js/influencer/wallet.js?v=1.2.6"></script>
-<script src="js/influencer/profile.js?v=1.2.6"></script>
+<script src="js/influencer/profile.js?v=1.3.0"></script>
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.2.6"></script>

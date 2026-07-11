@@ -44,6 +44,12 @@ if ($action === 'me') {
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user) apiError('User not found', 404);
+
+    // Attach social media accounts (user_platforms)
+    $platStmt = $db->prepare("SELECT platform, social_handle as handle, follower_count as followers FROM user_platforms WHERE user_id = ? ORDER BY id ASC");
+    $platStmt->execute([$_SESSION['user_id']]);
+    $user['platforms'] = $platStmt->fetchAll();
+
     apiSuccess($user);
 }
 
@@ -147,6 +153,36 @@ if ($action === 'change_password') {
     $stmt->execute([password_hash($newPwd, PASSWORD_BCRYPT), $userId]);
 
     apiSuccess([], 'Password changed successfully');
+}
+
+// ─── Save Platforms (Influencer self-service) ──
+if ($action === 'save_platforms') {
+    requireAuth();
+    $input  = getInput();
+    $userId = $_SESSION['user_id'];
+    $plats  = $input['platforms'] ?? [];
+
+    $db = getDB();
+
+    // Delete existing and re-insert
+    $db->prepare("DELETE FROM user_platforms WHERE user_id = ?")->execute([$userId]);
+
+    if (!empty($plats)) {
+        $ins = $db->prepare("INSERT INTO user_platforms (user_id, platform, social_handle, follower_count) VALUES (?, ?, ?, ?)");
+        foreach ($plats as $p) {
+            $pName = sanitize($p['platform'] ?? '');
+            $pHand = sanitize($p['handle'] ?? '');
+            $pFollowers = (int)($p['followers'] ?? 0);
+            if ($pName) {
+                $ins->execute([$userId, $pName, $pHand, $pFollowers]);
+            }
+        }
+    }
+
+    // Return updated platforms list
+    $platStmt = $db->prepare("SELECT platform, social_handle as handle, follower_count as followers FROM user_platforms WHERE user_id = ? ORDER BY id ASC");
+    $platStmt->execute([$userId]);
+    apiSuccess($platStmt->fetchAll(), 'Social media accounts saved successfully');
 }
 
 apiError('Invalid action');
