@@ -177,6 +177,7 @@ App.api = (function ($) {
     recentEvents:  function (lim, dateFrom, dateTo)  { return _request('analytics', 'recent_events', {limit: lim||20, date_from: dateFrom||'', date_to: dateTo||''}, 'GET'); },
     chartDaily:    function (days) { return _request('analytics', 'chart_daily',   {days: days||30}, 'GET'); },
     visitorLeads:  function (pId)  { return _request('analytics', 'visitor_leads',  {product_id: pId||0}, 'GET'); },
+    insights:      function (dateFrom, dateTo, clientId, influencerId) { return _request('analytics', 'insights', {date_from: dateFrom||'', date_to: dateTo||'', client_id: clientId||0, influencer_id: influencerId||0}, 'GET'); },
   };
 
   /* ── Points ──────────────────────────────── */

@@ -187,4 +187,194 @@ if ($action === 'visitor_leads') {
     apiSuccess($stmt->fetchAll());
 }
 
+// ─── Full Insights Dashboard ──────────────────
+if ($action === 'insights') {
+    requireAdmin();
+    $dateFrom     = param('date_from', '');
+    $dateTo       = param('date_to', '');
+    $clientId     = (int)param('client_id', 0);
+    $influencerId = (int)param('influencer_id', 0);
+
+    // 1. Get configs for pro-rata rates fallback
+    $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch() ?: [
+        'conversions_per_point' => 100,
+        'value_per_point' => 1.000,
+        'clicks_per_point' => 1000,
+        'click_value_per_point' => 1.000,
+        'vendor_clicks_per_point' => 1000,
+        'vendor_click_value_per_point' => 1.000,
+        'vendor_conversions_per_point' => 100,
+        'vendor_conversion_value_per_point' => 2.000,
+        'currency' => 'BHD'
+    ];
+
+    $cl_cpp   = (int)($cfg['clicks_per_point'] ?? 1000);
+    $cl_vpp   = (float)($cfg['click_value_per_point'] ?? 1.000);
+    $cpp      = (int)($cfg['conversions_per_point'] ?? 100);
+    $vpp      = (float)($cfg['value_per_point'] ?? 1.000);
+
+    $v_cl_cpp = (int)($cfg['vendor_clicks_per_point'] ?? 1000);
+    $v_cl_vpp = (float)($cfg['vendor_click_value_per_point'] ?? 1.000);
+    $v_cpp    = (int)($cfg['vendor_conversions_per_point'] ?? 100);
+    $v_cvpp   = (float)($cfg['vendor_conversion_value_per_point'] ?? 2.000);
+
+    $fallback_cl_cpc = $v_cl_cpp > 0 ? ($v_cl_vpp / $v_cl_cpp) : 0.000;
+    $fallback_cl_cpl = $v_cpp > 0 ? ($v_cvpp / $v_cpp) : 0.000;
+    
+    $fallback_inf_cpc = $cl_cpp > 0 ? ($cl_vpp / $cl_cpp) : 0.000;
+    $fallback_inf_cpl = $cpp > 0 ? ($vpp / $cpp) : 0.000;
+
+    // 2. Fetch matching events
+    $where = [];
+    $params = [];
+
+    if (!empty($dateFrom)) {
+        $where[] = "DATE(e.timestamp) >= ?";
+        $params[] = $dateFrom;
+    }
+    if (!empty($dateTo)) {
+        $where[] = "DATE(e.timestamp) <= ?";
+        $params[] = $dateTo;
+    }
+    if ($clientId > 0) {
+        $where[] = "p.client_id = ?";
+        $params[] = $clientId;
+    }
+    if ($influencerId > 0) {
+        $where[] = "c.influencer_id = ?";
+        $params[] = $influencerId;
+    }
+
+    $whereStr = $where ? 'AND ' . implode(' AND ', $where) : '';
+
+    $sql = "
+        SELECT e.id, e.type, e.timestamp,
+               c.offer_code, c.influencer_id,
+               p.name as product_name, p.client_id,
+               p.cpc_rate, p.cpl_rate,
+               u.name as influencer_name,
+               cl.name as client_name
+        FROM events e
+        JOIN campaigns c ON c.id = e.campaign_id
+        JOIN products  p ON p.id = c.product_id
+        JOIN users     u ON u.id = c.influencer_id
+        JOIN users     cl ON cl.id = p.client_id
+        WHERE e.type IN ('click', 'conversion') $whereStr
+        ORDER BY e.timestamp DESC
+    ";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $events = $stmt->fetchAll();
+
+    // 3. Process events to build transaction list & aggregate stats
+    $txs = [];
+    $totalClientCharge = 0;
+    $totalInfluencerPayout = 0;
+    $clicksCount = 0;
+    $conversionsCount = 0;
+
+    $infStats = []; // to track earnings grouped by influencer
+
+    foreach ($events as $e) {
+        $cpc_rate = (float)$e['cpc_rate'];
+        $cpl_rate = (float)$e['cpl_rate'];
+
+        $clientCut = 0;
+        $influencerCut = 0;
+
+        if ($e['type'] === 'click') {
+            $clicksCount++;
+            $clientCut = $cpc_rate > 0 ? $cpc_rate : $fallback_cl_cpc;
+            $influencerCut = $cpc_rate > 0 ? $cpc_rate : $fallback_inf_cpc;
+        } else if ($e['type'] === 'conversion') {
+            $conversionsCount++;
+            $clientCut = $cpl_rate > 0 ? $cpl_rate : $fallback_cl_cpl;
+            $influencerCut = $cpl_rate > 0 ? $cpl_rate : $fallback_inf_cpl;
+        }
+
+        $profit = $clientCut - $influencerCut;
+
+        $totalClientCharge += $clientCut;
+        $totalInfluencerPayout += $influencerCut;
+
+        $infId = (int)$e['influencer_id'];
+        if (!isset($infStats[$infId])) {
+            $infStats[$infId] = [
+                'influencer_id' => $infId,
+                'name' => $e['influencer_name'],
+                'clicks' => 0,
+                'conversions' => 0,
+                'earnings' => 0.000
+            ];
+        }
+
+        if ($e['type'] === 'click') {
+            $infStats[$infId]['clicks']++;
+        } else {
+            $infStats[$infId]['conversions']++;
+        }
+        $infStats[$infId]['earnings'] += $influencerCut;
+
+        $txs[] = [
+            'id' => $e['id'],
+            'timestamp' => $e['timestamp'],
+            'type' => $e['type'],
+            'client_name' => $e['client_name'],
+            'influencer_name' => $e['influencer_name'],
+            'product_name' => $e['product_name'] . ' (' . $e['offer_code'] . ')',
+            'client_cut' => round($clientCut, 3),
+            'influencer_cut' => round($influencerCut, 3),
+            'profit' => round($profit, 3)
+        ];
+    }
+
+    // 4. Query Running Campaigns Count (with filters)
+    $campWhere = ["c.status = 'active'"];
+    $campParams = [];
+    if ($clientId > 0) {
+        $campWhere[] = "p.client_id = ?";
+        $campParams[] = $clientId;
+    }
+    if ($influencerId > 0) {
+        $campWhere[] = "c.influencer_id = ?";
+        $campParams[] = $influencerId;
+    }
+    $campWhereStr = implode(' AND ', $campWhere);
+    $campStmt = $db->prepare("
+        SELECT COUNT(*) 
+        FROM campaigns c
+        JOIN products p ON p.id = c.product_id
+        WHERE $campWhereStr
+    ");
+    $campStmt->execute($campParams);
+    $runningCampaigns = (int)$campStmt->fetchColumn();
+
+    // 5. Query Active Clients with Positive Wallet Balance (with client filter if selected)
+    $clientWhere = ["role = 'client'", "status = 'active'", "wallet_balance > 0"];
+    $clientParams = [];
+    if ($clientId > 0) {
+        $clientWhere[] = "id = ?";
+        $clientParams[] = $clientId;
+    }
+    $clientWhereStr = implode(' AND ', $clientWhere);
+    $clientStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE $clientWhereStr");
+    $clientStmt->execute($clientParams);
+    $clientsWithBalance = (int)$clientStmt->fetchColumn();
+
+    apiSuccess([
+        'stats' => [
+            'running_campaigns' => $runningCampaigns,
+            'clients_with_balance' => $clientsWithBalance,
+            'total_client_charge' => round($totalClientCharge, 3),
+            'total_influencer_payout' => round($totalInfluencerPayout, 3),
+            'total_admin_profit' => round($totalClientCharge - $totalInfluencerPayout, 3),
+            'clicks_count' => $clicksCount,
+            'conversions_count' => $conversionsCount
+        ],
+        'influencers_summary' => array_values($infStats),
+        'transactions' => $txs
+    ]);
+}
+
 apiError('Invalid action');

@@ -19,6 +19,7 @@ App.router = (function ($) {
     'admin/analytics':     function(){ App.Admin.Analytics.init(); },
     'admin/points':        function(){ App.Admin.Points.init(); },
     'admin/wallet':        function(){ App.Admin.Wallet.init(); },
+    'admin/insights':      function(){ App.Admin.Insights.init(); },
     'influencer/dashboard':function(){ App.Influencer.Dashboard.init(); },
     'influencer/campaigns':function(){ App.Influencer.Campaigns.init(); },
     'influencer/wallet':   function(){ App.Influencer.Wallet.init(); },
@@ -121,6 +122,7 @@ App.router = (function ($) {
       'admin/products':      App.i18n.t('products'),
       'admin/campaigns':     App.i18n.t('campaigns'),
       'admin/analytics':     App.i18n.t('analytics'),
+      'admin/insights':      'Transaction Insights',
       'admin/points':        App.i18n.t('points'),
       'admin/wallet':        App.i18n.t('wallet'),
       'influencer/dashboard':App.i18n.t('dashboard'),
@@ -163,6 +165,9 @@ App.router = (function ($) {
         <div class="nav-section-label">Reports</div>
         <a class="nav-item" data-route="admin/analytics" href="#/admin/analytics">
           <span class="nav-icon">📈</span><span data-i18n="analytics">${App.i18n.t('analytics')}</span>
+        </a>
+        <a class="nav-item" data-route="admin/insights" href="#/admin/insights">
+          <span class="nav-icon">💡</span><span>Transaction Insights</span>
         </a>
         <div class="nav-section-label">Finance</div>
         <a class="nav-item" data-route="admin/points" href="#/admin/points">

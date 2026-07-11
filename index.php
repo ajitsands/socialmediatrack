@@ -171,6 +171,7 @@ header("Pragma: no-cache");
 <script src="js/admin/analytics.js?v=1.2.6"></script>
 <script src="js/admin/points.js?v=1.2.7"></script>
 <script src="js/admin/wallet.js?v=1.2.7"></script>
+<script src="js/admin/insights.js?v=1.2.7"></script>
 
 <!-- Influencer modules -->
 <script src="js/influencer/dashboard.js?v=1.2.9"></script>
@@ -185,7 +186,7 @@ header("Pragma: no-cache");
 <script src="js/client/influencers.js?v=1.3.1"></script>
 
 <!-- Router (boot last) -->
-<script src="js/app.js?v=1.2.7"></script>
+<script src="js/app.js?v=1.2.8"></script>
 
 <!-- SaNDS Lab Info Modal -->
 <div id="modal-sandslab" class="custom-modal" style="display:none; position:relative; z-index:99999;">
