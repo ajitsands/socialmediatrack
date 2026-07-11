@@ -95,7 +95,7 @@ App.Admin.Insights = (function ($) {
         <div class="stat-card blue">
           <div class="stat-icon">🏢</div>
           <div class="stat-info">
-            <div class="stat-value" id="kpi-funded-clients" style="font-size:1.45rem">0.000 BHD</div>
+            <div class="stat-value" id="kpi-funded-clients" style="font-size:1.45rem">0.000<span style="font-size:0.7em; font-weight:500; margin-left:3px; opacity:0.8">BHD</span></div>
             <div class="stat-label">Total Clients Balance</div>
           </div>
         </div>
@@ -103,7 +103,7 @@ App.Admin.Insights = (function ($) {
         <div class="stat-card green">
           <div class="stat-icon">📥</div>
           <div class="stat-info">
-            <div class="stat-value" id="kpi-client-charge" style="font-size:1.45rem">0.000 BHD</div>
+            <div class="stat-value" id="kpi-client-charge" style="font-size:1.45rem">0.000<span style="font-size:0.7em; font-weight:500; margin-left:3px; opacity:0.8">BHD</span></div>
             <div class="stat-label">Client Cuts Charged</div>
           </div>
         </div>
@@ -111,7 +111,7 @@ App.Admin.Insights = (function ($) {
         <div class="stat-card rose">
           <div class="stat-icon">📤</div>
           <div class="stat-info">
-            <div class="stat-value" id="kpi-influencer-payout" style="font-size:1.45rem">0.000 BHD</div>
+            <div class="stat-value" id="kpi-influencer-payout" style="font-size:1.45rem">0.000<span style="font-size:0.7em; font-weight:500; margin-left:3px; opacity:0.8">BHD</span></div>
             <div class="stat-label">Payouts to Influencer</div>
           </div>
         </div>
@@ -119,7 +119,7 @@ App.Admin.Insights = (function ($) {
         <div class="stat-card purple" style="border: 2px solid var(--primary-light)">
           <div class="stat-icon">👑</div>
           <div class="stat-info">
-            <div class="stat-value" id="kpi-admin-profit" style="font-size:1.6rem; color:var(--primary)">0.000 BHD</div>
+            <div class="stat-value" id="kpi-admin-profit" style="font-size:1.6rem; color:var(--primary)">0.000<span style="font-size:0.7em; font-weight:500; margin-left:3px; opacity:0.8">BHD</span></div>
             <div class="stat-label" style="font-weight:700">Admin Net Profit</div>
           </div>
         </div>
@@ -248,15 +248,19 @@ App.Admin.Insights = (function ($) {
         var d = res.data;
         var s = d.stats;
 
+        var formatBHD = function(val) {
+          return parseFloat(val).toFixed(3) + '<span style="font-size:0.7em; font-weight:500; margin-left:3px; opacity:0.75">BHD</span>';
+        };
+
         // Populate KPI stats
         $('#kpi-running-campaigns').text(s.running_campaigns);
-        $('#kpi-funded-clients').text(parseFloat(s.total_clients_balance).toFixed(3) + ' BHD');
-        $('#kpi-client-charge').text(parseFloat(s.total_client_charge).toFixed(3) + ' BHD');
-        $('#kpi-influencer-payout').text(parseFloat(s.total_influencer_payout).toFixed(3) + ' BHD');
+        $('#kpi-funded-clients').html(formatBHD(s.total_clients_balance));
+        $('#kpi-client-charge').html(formatBHD(s.total_client_charge));
+        $('#kpi-influencer-payout').html(formatBHD(s.total_influencer_payout));
         
         var profitVal = parseFloat(s.total_admin_profit);
         var profitColor = profitVal >= 0 ? '#22C55E' : '#EF4444';
-        $('#kpi-admin-profit').text(profitVal.toFixed(3) + ' BHD').css('color', profitColor);
+        $('#kpi-admin-profit').html(formatBHD(profitVal)).css('color', profitColor);
 
         $('#insights-active-influencers-badge').text(s.active_influencers);
         $('#insights-active-clients-badge').text(s.active_clients);
