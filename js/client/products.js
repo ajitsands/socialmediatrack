@@ -169,6 +169,7 @@ App.Client.Products = (function ($) {
                 <label class="form-label">Target Social Media Display Platform <span class="req">*</span></label>
                 <select class="form-control" id="prod-display-platform" required style="font-weight:600; color:var(--primary)">
                   <option value="instagram">Instagram Post / Feed (1:1 Square)</option>
+                  <option value="facebook">Facebook Post / Feed (1:1 Square)</option>
                   <option value="tiktok">TikTok / Reels (9:16 Vertical)</option>
                   <option value="youtube">YouTube (16:9 Landscape)</option>
                   <option value="other">Other (1:1 Square)</option>
@@ -261,6 +262,7 @@ App.Client.Products = (function ($) {
           data.forEach(function (p, idx) {
             var platformLabels = {
               'instagram': '📸 Instagram (1:1)',
+              'facebook': '🔵 Facebook (1:1)',
               'tiktok': '🎵 TikTok (9:16)',
               'youtube': '📺 YouTube (16:9)',
               'other': '📦 Other (1:1)'

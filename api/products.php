@@ -54,13 +54,14 @@ if ($action === 'create') {
     $pUrl     = trim($input['product_url'] ?? '');
     $dUrl     = trim($input['demo_url']    ?? '');
     $status   = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $platform = sanitize($input['display_platform'] ?? 'instagram');
 
     if (!$name)  apiError('Product name is required.');
     if ($price < 0) apiError('Price cannot be negative.');
     if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
 
-    $stmt = $db->prepare("INSERT INTO products (client_id,name,category,description,price,cpc_rate,cpl_rate,currency,image_url,product_url,demo_url,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status]);
+    $stmt = $db->prepare("INSERT INTO products (client_id,name,category,description,price,cpc_rate,cpl_rate,currency,image_url,product_url,demo_url,status,display_platform) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status,$platform]);
     $newId = $db->lastInsertId();
 
     $get = $db->prepare("SELECT p.*, u.name as client_name FROM products p LEFT JOIN users u ON u.id=p.client_id WHERE p.id=?");
@@ -83,13 +84,14 @@ if ($action === 'update') {
     $pUrl     = trim($input['product_url'] ?? '');
     $dUrl     = trim($input['demo_url']    ?? '');
     $status   = in_array($input['status'] ?? 'active', ['active','inactive']) ? $input['status'] : 'active';
+    $platform = sanitize($input['display_platform'] ?? 'instagram');
 
     if (!$id || !$name) apiError('ID and Name are required.');
     if ($price < 0) apiError('Price cannot be negative.');
     if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
 
-    $stmt = $db->prepare("UPDATE products SET client_id=?,name=?,category=?,description=?,price=?,cpc_rate=?,cpl_rate=?,currency=?,image_url=?,product_url=?,demo_url=?,status=? WHERE id=?");
-    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status,$id]);
+    $stmt = $db->prepare("UPDATE products SET client_id=?,name=?,category=?,description=?,price=?,cpc_rate=?,cpl_rate=?,currency=?,image_url=?,product_url=?,demo_url=?,status=?,display_platform=? WHERE id=?");
+    $stmt->execute([$clientId,$name,$cat,$desc,$price,$cpcRate,$cplRate,$curr,$imgUrl,$pUrl,$dUrl,$status,$platform,$id]);
 
     $get = $db->prepare("SELECT p.*, u.name as client_name FROM products p LEFT JOIN users u ON u.id=p.client_id WHERE p.id=?");
     $get->execute([$id]);

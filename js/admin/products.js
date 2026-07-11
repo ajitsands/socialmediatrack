@@ -162,6 +162,16 @@ App.Admin.Products = (function ($) {
                   <label class="form-label">${t('image_url')}</label>
                   <input type="url" class="form-control" id="prod-image" placeholder="https://...">
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Target Social Media Display Platform <span class="req">*</span></label>
+                  <select class="form-control" id="prod-display-platform" required style="font-weight:600; color:var(--primary)">
+                    <option value="instagram">Instagram Post / Feed (1:1 Square)</option>
+                    <option value="facebook">Facebook Post / Feed (1:1 Square)</option>
+                    <option value="tiktok">TikTok / Reels (9:16 Vertical)</option>
+                    <option value="youtube">YouTube (16:9 Landscape)</option>
+                    <option value="other">Other (1:1 Square)</option>
+                  </select>
+                </div>
                 <div class="grid-2">
                   <div class="form-group">
                     <label class="form-label">${t('product_url')} <span class="req">*</span></label>
@@ -253,6 +263,7 @@ App.Admin.Products = (function ($) {
       $('#prod-cpc-rate').val('0.000');
       $('#prod-cpl-rate').val('0.000');
       $('#prod-client').val('');
+      $('#prod-display-platform').val('instagram');
       $('#modal-product').show();
     });
 
@@ -274,6 +285,7 @@ App.Admin.Products = (function ($) {
         $('#prod-client').val(r.client_id || '');
         $('#prod-cpc-rate').val(parseFloat(r.cpc_rate).toFixed(3));
         $('#prod-cpl-rate').val(parseFloat(r.cpl_rate).toFixed(3));
+        $('#prod-display-platform').val(r.display_platform || 'instagram');
         $('#modal-product').show();
       }).fail(App.api.handleError);
     });
@@ -295,6 +307,7 @@ App.Admin.Products = (function ($) {
         client_id: $('#prod-client').val() || null,
         cpc_rate: $('#prod-cpc-rate').val() || 0,
         cpl_rate: $('#prod-cpl-rate').val() || 0,
+        display_platform: $('#prod-display-platform').val() || 'instagram',
       };
       var action = data.id ? App.api.products.update(data) : App.api.products.create(data);
       var $btn = $(this).prop('disabled',true).html('<span class="spinner"></span>');
