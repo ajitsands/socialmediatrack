@@ -30,6 +30,7 @@ if ($action === 'list') {
         SELECT c.*,
                p.name as product_name, p.category as product_category,
                p.price, p.currency, p.product_url, p.image_url,
+               p.cpc_rate, p.cpl_rate,
                u.name as influencer_name, u.social_handle,
                IFNULL(c.platform, u.platform) as platform,
                COUNT(DISTINCT e.id) as total_clicks,
@@ -48,10 +49,30 @@ if ($action === 'list') {
         $total_clicks = (int)$c['total_clicks'];
         $total_conversions = (int)$c['total_conversions'];
 
-        $conv_pts = $cpp > 0 ? floor($total_conversions / $cpp) : 0;
-        $click_pts = $cl_cpp > 0 ? floor($total_clicks / $cl_cpp) : 0;
-        
-        $c['earned_amount'] = round(($conv_pts * $vpp) + ($click_pts * $cl_vpp), 3);
+        $cpc_rate = (float)$c['cpc_rate'];
+        $cpl_rate = (float)$c['cpl_rate'];
+
+        $cpc_p = ($cl_cpp > 0) ? round($cl_vpp / $cl_cpp, 4) : 0.0000;
+        $cpl_p = ($cpp > 0) ? round($vpp / $cpp, 4) : 0.0000;
+
+        $c['final_cpc'] = $cpc_rate > 0 ? $cpc_rate : $cpc_p;
+        $c['final_cpl'] = $cpl_rate > 0 ? $cpl_rate : $cpl_p;
+
+        if ($cpc_rate > 0) {
+            $click_earn = $total_clicks * $cpc_rate;
+        } else {
+            $click_pts = $cl_cpp > 0 ? floor($total_clicks / $cl_cpp) : 0;
+            $click_earn = $click_pts * $cl_vpp;
+        }
+
+        if ($cpl_rate > 0) {
+            $conv_earn = $total_conversions * $cpl_rate;
+        } else {
+            $conv_pts = $cpp > 0 ? floor($total_conversions / $cpp) : 0;
+            $conv_earn = $conv_pts * $vpp;
+        }
+
+        $c['earned_amount'] = round($click_earn + $conv_earn, 3);
         $c['currency'] = $curr;
     }
     apiSuccess($campaigns);
@@ -283,10 +304,25 @@ if ($action === 'list_requests') {
     requireAuth();
     $sess = $_SESSION;
 
+    $cfg = $db->query("SELECT * FROM points_config LIMIT 1")->fetch() ?: [
+        'conversions_per_point' => 100,
+        'value_per_point' => 1.000,
+        'clicks_per_point' => 1000,
+        'click_value_per_point' => 1.000,
+    ];
+    $cpp = (int)$cfg['conversions_per_point'];
+    $vpp = (float)$cfg['value_per_point'];
+    $cl_cpp = (int)$cfg['clicks_per_point'];
+    $cl_vpp = (float)$cfg['click_value_per_point'];
+
+    $cpc_p = ($cl_cpp > 0) ? round($cl_vpp / $cl_cpp, 4) : 0.0000;
+    $cpl_p = ($cpp > 0) ? round($vpp / $cpp, 4) : 0.0000;
+
     if ($sess['role'] === 'influencer') {
         // Return requests directed to this influencer
         $stmt = $db->prepare("
             SELECT cr.*, p.name as product_name, p.category as product_category, p.product_url, p.image_url,
+                   p.cpc_rate, p.cpl_rate,
                    c.name as client_name, c.email as client_email,
                    COUNT(DISTINCT e.id) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
@@ -302,11 +338,12 @@ if ($action === 'list_requests') {
             ORDER BY cr.created_at DESC
         ");
         $stmt->execute([$sess['user_id']]);
-        apiSuccess($stmt->fetchAll());
+        $requests = $stmt->fetchAll();
     } elseif ($sess['role'] === 'client') {
         // Return requests sent by this client
         $stmt = $db->prepare("
             SELECT cr.*, p.name as product_name, p.image_url,
+                   p.cpc_rate, p.cpl_rate,
                    i.name as influencer_name, i.social_handle,
                    COUNT(DISTINCT e.id) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
@@ -322,11 +359,12 @@ if ($action === 'list_requests') {
             ORDER BY cr.created_at DESC
         ");
         $stmt->execute([$sess['user_id']]);
-        apiSuccess($stmt->fetchAll());
+        $requests = $stmt->fetchAll();
     } else {
         // Admin: return all requests
         $stmt = $db->query("
             SELECT cr.*, p.name as product_name, p.image_url,
+                   p.cpc_rate, p.cpl_rate,
                    i.name as influencer_name, c.name as client_name,
                    COUNT(DISTINCT e.id) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
@@ -341,8 +379,16 @@ if ($action === 'list_requests') {
             GROUP BY cr.id
             ORDER BY cr.created_at DESC
         ");
-        apiSuccess($stmt->fetchAll());
+        $requests = $stmt->fetchAll();
     }
+
+    foreach ($requests as &$r) {
+        $cpc_rate = (float)$r['cpc_rate'];
+        $cpl_rate = (float)$r['cpl_rate'];
+        $r['final_cpc'] = $cpc_rate > 0 ? $cpc_rate : $cpc_p;
+        $r['final_cpl'] = $cpl_rate > 0 ? $cpl_rate : $cpl_p;
+    }
+    apiSuccess($requests);
 }
 
 // ─── Respond Campaign Request ──────────────────

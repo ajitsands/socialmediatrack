@@ -224,7 +224,7 @@ App.Influencer.Campaigns = (function ($) {
           <div class="table-wrapper" style="padding:16px">
             <table id="tbl-my-campaigns" class="dataTable" style="width:100%">
               <thead>
-                <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Earned</th><th>Status</th><th>Link</th></tr>
+                <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>CPC</th><th>CPL</th><th>Earned</th><th>Status</th><th>Link</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -250,12 +250,14 @@ App.Influencer.Campaigns = (function ($) {
                   <th>Clicks</th>
                   <th>Conversions</th>
                   <th>Rate</th>
+                  <th>CPC</th>
+                  <th>CPL</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="tbl-incoming-requests-body">
-                <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
+                <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
               </tbody>
             </table>
           </div>
@@ -291,6 +293,14 @@ App.Influencer.Campaigns = (function ($) {
           { data: null, render: function(d,t,r){
               var rate = r.total_clicks>0?((r.total_conversions/r.total_clicks)*100).toFixed(1):0;
               return `<span style="font-weight:700;color:${rate>=10?'var(--success)':rate>=5?'var(--warning)':'var(--danger)'}">${rate}%</span>`;
+            }
+          },
+          { data: 'final_cpc', render: function(d,t,r){
+              return `<span style="font-weight:600">${parseFloat(d || 0).toFixed(3)} ${r.currency || 'BHD'}</span>`;
+            }
+          },
+          { data: 'final_cpl', render: function(d,t,r){
+              return `<span style="font-weight:600">${parseFloat(d || 0).toFixed(3)} ${r.currency || 'BHD'}</span>`;
             }
           },
           { data: 'earned_amount', render: function(d,t,r){
@@ -344,7 +354,7 @@ App.Influencer.Campaigns = (function ($) {
       var data = res.data || [];
       var rows = '';
       if (data.length === 0) {
-        rows = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
+        rows = `<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
       } else {
         data.forEach(function(r, idx){
           var platIcons = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐'};
@@ -359,6 +369,9 @@ App.Influencer.Campaigns = (function ($) {
           var clicks = parseInt(r.total_clicks || 0);
           var conversions = parseInt(r.total_conversions || 0);
           var rate = clicks > 0 ? ((conversions / clicks) * 100).toFixed(1) : '0.0';
+
+          var cpcVal = parseFloat(r.final_cpc || 0).toFixed(3);
+          var cplVal = parseFloat(r.final_cpl || 0).toFixed(3);
 
           var actionsHtml = '';
           var statusHtml = '';
@@ -396,6 +409,8 @@ App.Influencer.Campaigns = (function ($) {
               <td><span style="color:var(--info);font-weight:700">${clicks}</span></td>
               <td><span style="color:var(--success);font-weight:700">${conversions}</span></td>
               <td><span style="font-weight:700;color:${rate>=10?'var(--success)':rate>=5?'var(--warning)':'var(--danger)'}">${rate}%</span></td>
+              <td><span style="font-weight:600">${cpcVal} BHD</span></td>
+              <td><span style="font-weight:600">${cplVal} BHD</span></td>
               <td>${statusHtml}</td>
               <td>${actionsHtml}</td>
             </tr>
