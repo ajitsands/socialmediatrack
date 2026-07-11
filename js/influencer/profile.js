@@ -193,11 +193,14 @@ App.Influencer.Profile = (function ($) {
 
       <!-- Categories / Niches Card (full width) -->
       <div class="card" style="margin-top:24px">
-        <div class="card-header">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
           <span class="card-title">🏷️ My Categories / Niches</span>
+          <span id="cat-counter-badge" style="font-size:0.85rem;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--primary-light);color:var(--primary)">0 / 3 selected</span>
         </div>
         <div class="card-body">
-          <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px 0">Select all the categories that best describe your content. This helps clients in the right niche discover you.</p>
+          <p style="font-size:0.88rem;color:var(--text-muted);margin:0 0 16px 0;line-height:1.4">
+            ✨ Define your influence! Choose <strong>your top 3 best-suited categories or niches</strong>. This ensures you stand out to brands and clients looking specifically for your style of content.
+          </p>
           <div id="profile-categories-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--table-stripe);margin-bottom:20px;min-height:60px">
             <span style="color:var(--text-muted);font-size:0.85rem">Loading categories…</span>
           </div>
@@ -298,6 +301,29 @@ App.Influencer.Profile = (function ($) {
         </label>`;
     }).join('');
     $con.html(html);
+    updateCatCounter(); // Update badge and enforce limit
+
+    // Live enforcement: when a checkbox changes, recheck the limit
+    $(document).off('change', '.prof-cat-cb').on('change', '.prof-cat-cb', function() {
+      updateCatCounter();
+    });
+  }
+
+  // Updates the counter badge and disables unchecked boxes when limit reached
+  function updateCatCounter() {
+    var MAX = 3;
+    var checked = $('.prof-cat-cb:checked').length;
+    var $badge  = $('#cat-counter-badge');
+    $badge.text(checked + ' / ' + MAX + ' selected');
+    if (checked >= MAX) {
+      $badge.css({ background: '#FFE4E4', color: '#DC2626' });
+      // Disable all unchecked checkboxes
+      $('.prof-cat-cb:not(:checked)').prop('disabled', true).closest('.cat-label').css({ opacity: '0.45', cursor: 'not-allowed' });
+    } else {
+      $badge.css({ background: 'var(--primary-light)', color: 'var(--primary)' });
+      // Re-enable all checkboxes
+      $('.prof-cat-cb').prop('disabled', false).closest('.cat-label').css({ opacity: '', cursor: 'pointer' });
+    }
   }
 
   function addProfilePlatformRow(plat, handle, followers) {
@@ -472,6 +498,16 @@ App.Influencer.Profile = (function ($) {
       $('.prof-cat-cb:checked').each(function() {
         ids.push(parseInt($(this).val()));
       });
+
+      if (ids.length === 0) {
+        Swal.fire({ icon: 'info', title: 'No Category Selected', text: 'Please select at least one category before saving.' });
+        return;
+      }
+      if (ids.length > 3) {
+        Swal.fire({ icon: 'warning', title: 'Too Many Selected', text: 'You can only select up to 3 categories.' });
+        return;
+      }
+
       var $btn = $(this).prop('disabled', true).text('Saving…');
       App.api.auth.saveCategories(ids)
         .done(function() {
