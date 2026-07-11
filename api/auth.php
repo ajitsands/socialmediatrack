@@ -205,15 +205,25 @@ if ($action === 'save_categories') {
     $userId = $_SESSION['user_id'];
     $ids    = $input['category_ids'] ?? [];
 
+    // Server-side safety limit: max 3 categories
+    if (count($ids) > 3) {
+        apiError('You can only select up to 3 categories.');
+    }
+
     $db = getDB();
     // Delete and re-insert
     $db->prepare("DELETE FROM user_categories WHERE user_id = ?")->execute([$userId]);
 
     if (!empty($ids)) {
         $ins = $db->prepare("INSERT INTO user_categories (user_id, category_id) VALUES (?, ?)");
+        $count = 0;
         foreach ($ids as $cid) {
             $cid = (int)$cid;
-            if ($cid > 0) $ins->execute([$userId, $cid]);
+            if ($cid > 0) {
+                $ins->execute([$userId, $cid]);
+                $count++;
+                if ($count >= 3) break;
+            }
         }
     }
     apiSuccess([], 'Categories saved successfully');
