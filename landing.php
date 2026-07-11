@@ -159,8 +159,8 @@ header("Pragma: no-cache");
 }());
 </script>
 <!-- SaNDS Lab Info Modal -->
-<div id="modal-sandslab" class="custom-modal" style="display:none; z-index:99999;">
-  <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+<div id="modal-sandslab" class="custom-modal" style="display:none; position:relative; z-index:99999;">
+  <div class="modal-overlay" style="background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; z-index:99999;">
     <div class="modal-box" style="max-width:420px; width:90%; padding:32px; text-align:center; border-radius:20px; border:1px solid rgba(0,0,0,0.15); box-shadow:0 20px 40px rgba(0,0,0,0.3); background:#ffffff; color:#1a1a2e; position:relative">
       <button class="modal-close" id="btn-close-sandslab" style="position:absolute; top:16px; right:16px; font-size:1.25rem; background:none; border:none; color:#9ca3af; cursor:pointer;">✕</button>
       <div style="margin-bottom:20px;">
