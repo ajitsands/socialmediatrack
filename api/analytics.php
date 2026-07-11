@@ -379,6 +379,23 @@ if ($action === 'insights') {
         $cl['wallet_balance'] = round((float)$cl['wallet_balance'], 3);
     }
 
+    // 6. Query Total Active Influencers count
+    $infWhere = ["role = 'influencer'", "status = 'active'"];
+    $infParams = [];
+    if ($influencerId > 0) {
+        $infWhere[] = "id = ?";
+        $infParams[] = $influencerId;
+    }
+    $infWhereStr = implode(' AND ', $infWhere);
+    $activeInfluencersStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE $infWhereStr");
+    $activeInfluencersStmt->execute($infParams);
+    $totalActiveInfluencers = (int)$activeInfluencersStmt->fetchColumn();
+
+    // 7. Query Total Active Clients count
+    $activeClientsStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE $clientWhereStr");
+    $activeClientsStmt->execute($clientParams);
+    $totalActiveClients = (int)$activeClientsStmt->fetchColumn();
+
     apiSuccess([
         'stats' => [
             'running_campaigns' => $runningCampaigns,
@@ -388,7 +405,9 @@ if ($action === 'insights') {
             'total_influencer_payout' => round($totalInfluencerPayout, 3),
             'total_admin_profit' => round($totalClientCharge - $totalInfluencerPayout, 3),
             'clicks_count' => $clicksCount,
-            'conversions_count' => $conversionsCount
+            'conversions_count' => $conversionsCount,
+            'active_influencers' => $totalActiveInfluencers,
+            'active_clients' => $totalActiveClients
         ],
         'influencers_summary' => array_values($infStats),
         'clients_summary' => $clientsSummary,

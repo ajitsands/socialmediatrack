@@ -115,6 +115,22 @@ App.Admin.Insights = (function ($) {
           </div>
         </div>
 
+        <div class="stat-card teal" style="background:#E6FFFA; border-left:4px solid #319795">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpi-active-influencers">0</div>
+            <div class="stat-label">Active Influencers</div>
+          </div>
+        </div>
+
+        <div class="stat-card indigo" style="background:#EBF8FF; border-left:4px solid #3182CE">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpi-active-clients">0</div>
+            <div class="stat-label">Active Clients</div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Detail tables grid -->
@@ -248,6 +264,9 @@ App.Admin.Insights = (function ($) {
         var profitVal = parseFloat(s.total_admin_profit);
         var profitColor = profitVal >= 0 ? '#22C55E' : '#EF4444';
         $('#kpi-admin-profit').text(profitVal.toFixed(3) + ' BHD').css('color', profitColor);
+
+        $('#kpi-active-influencers').text(s.active_influencers);
+        $('#kpi-active-clients').text(s.active_clients);
 
         // 1. Initialize Influencers Payouts DataTable
         _dtInfluencers = $('#tbl-insights-influencers').DataTable({
