@@ -107,16 +107,39 @@ if ($action === 'by_product') {
 if ($action === 'recent_events') {
     requireAdmin();
     $limit = (int)param('limit', 20);
-    $stmt  = $db->prepare("
+    $dateFrom = param('date_from', '');
+    $dateTo   = param('date_to', '');
+
+    $where = '';
+    $params = [];
+    if (!empty($dateFrom)) {
+        $where .= " AND e.timestamp >= ?";
+        $params[] = $dateFrom . ' 00:00:00';
+    }
+    if (!empty($dateTo)) {
+        $where .= " AND e.timestamp <= ?";
+        $params[] = $dateTo . ' 23:59:59';
+    }
+
+    $sql = "
         SELECT e.*, c.offer_code, p.name as product_name, u.name as influencer_name
         FROM events e
         JOIN campaigns c ON c.id = e.campaign_id
         JOIN products  p ON p.id = c.product_id
         JOIN users     u ON u.id = c.influencer_id
+        WHERE 1=1 $where
         ORDER BY e.timestamp DESC
-        LIMIT ?
-    ");
-    $stmt->execute([$limit]);
+    ";
+
+    if (empty($dateFrom) && empty($dateTo)) {
+        $sql .= " LIMIT ?";
+        $params[] = $limit;
+    } else {
+        $sql .= " LIMIT 1000";
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     apiSuccess($stmt->fetchAll());
 }
 

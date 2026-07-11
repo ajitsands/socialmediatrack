@@ -126,7 +126,7 @@ App.api = (function ($) {
     byCampaign:    function ()     { return _request('analytics', 'by_campaign',   {}, 'GET'); },
     byInfluencer:  function ()     { return _request('analytics', 'by_influencer', {}, 'GET'); },
     byProduct:     function ()     { return _request('analytics', 'by_product',    {}, 'GET'); },
-    recentEvents:  function (lim)  { return _request('analytics', 'recent_events', {limit: lim||20}, 'GET'); },
+    recentEvents:  function (lim, dateFrom, dateTo)  { return _request('analytics', 'recent_events', {limit: lim||20, date_from: dateFrom||'', date_to: dateTo||''}, 'GET'); },
     chartDaily:    function (days) { return _request('analytics', 'chart_daily',   {days: days||30}, 'GET'); },
     visitorLeads:  function (pId)  { return _request('analytics', 'visitor_leads',  {product_id: pId||0}, 'GET'); },
   };

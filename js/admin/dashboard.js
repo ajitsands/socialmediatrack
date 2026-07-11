@@ -14,6 +14,31 @@ App.Admin.Dashboard = (function ($) {
     if (!App.auth.requireAuth('admin')) return;
     _recentTable = null; // Reset on init
     render();
+
+    // Default date range: current week (Sunday to today)
+    var now = new Date();
+    var day = now.getDay();
+    var sunday = new Date(now.setDate(now.getDate() - day));
+    
+    var yyyy_s = sunday.getFullYear();
+    var mm_s = String(sunday.getMonth() + 1).padStart(2, '0');
+    var dd_s = String(sunday.getDate()).padStart(2, '0');
+    var firstDay = yyyy_s + '-' + mm_s + '-' + dd_s;
+    
+    var todayDate = new Date();
+    var yyyy_t = todayDate.getFullYear();
+    var mm_t = String(todayDate.getMonth() + 1).padStart(2, '0');
+    var dd_t = String(todayDate.getDate()).padStart(2, '0');
+    var today = yyyy_t + '-' + mm_t + '-' + dd_t;
+
+    $('#activity-date-from').val(firstDay);
+    $('#activity-date-to').val(today);
+
+    // Event listener for date range filters
+    $(document).off('change', '#activity-date-from, #activity-date-to').on('change', '#activity-date-from, #activity-date-to', function () {
+      loadRecentEvents();
+    });
+
     loadStats();
   }
 
@@ -59,9 +84,17 @@ App.Admin.Dashboard = (function ($) {
 
       <!-- Recent Activity -->
       <div class="card">
-        <div class="card-header">
-          <span class="card-title">⚡ ${t('recent_activity')}</span>
-          <span class="badge badge-primary" id="activity-count">Loading…</span>
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-title">⚡ ${t('recent_activity')}</span>
+            <span class="badge badge-primary" id="activity-count">Loading…</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem">
+            <span style="font-weight:600;color:var(--text-secondary)">Date:</span>
+            <input type="date" id="activity-date-from" class="form-control" style="font-size:0.82rem;padding:4px 8px;width:135px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text)">
+            <span style="color:var(--text-muted)">—</span>
+            <input type="date" id="activity-date-to" class="form-control" style="font-size:0.82rem;padding:4px 8px;width:135px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text)">
+          </div>
         </div>
         <div class="card-body" style="padding:0">
           <div class="table-wrapper">
@@ -133,11 +166,22 @@ App.Admin.Dashboard = (function ($) {
       })
       .fail(App.api.handleError);
 
-    // Load recent events (last 100)
-    App.api.analytics.recentEvents(100)
+    // Load recent events
+    loadRecentEvents();
+
+    // Auto-refresh every 30s
+    if (_liveInterval) clearInterval(_liveInterval);
+    _liveInterval = setInterval(function(){ loadStats(); }, 30000);
+  }
+
+  function loadRecentEvents() {
+    var dateFrom = $('#activity-date-from').val() || '';
+    var dateTo = $('#activity-date-to').val() || '';
+
+    App.api.analytics.recentEvents(100, dateFrom, dateTo)
       .done(function (res) {
         var events = res.data;
-        $('#activity-count').text(events.length + ' recent');
+        $('#activity-count').text(events.length + (dateFrom ? ' filtered' : ' recent'));
 
         if (_recentTable) {
           // Update data smoothly without destroying the DOM structure
@@ -174,10 +218,6 @@ App.Admin.Dashboard = (function ($) {
         }
       })
       .fail(App.api.handleError);
-
-    // Auto-refresh every 30s
-    if (_liveInterval) clearInterval(_liveInterval);
-    _liveInterval = setInterval(function(){ loadStats(); }, 30000);
   }
 
   function loadChart(res) {
