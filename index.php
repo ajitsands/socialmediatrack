@@ -13,7 +13,7 @@ header("Pragma: no-cache");
   <title>InfluX Portal — Influencer Marketing Platform</title>
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=1.2.9">
 
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
@@ -164,7 +164,7 @@ header("Pragma: no-cache");
 
 <!-- Admin modules -->
 <script src="js/admin/dashboard.js?v=1.2.6"></script>
-<script src="js/admin/influencers.js?v=1.2.6"></script>
+<script src="js/admin/influencers.js?v=1.2.9"></script>
 <script src="js/admin/clients.js?v=1.2.7"></script>
 <script src="js/admin/products.js?v=1.2.9"></script>
 <script src="js/admin/campaigns.js?v=1.2.6"></script>

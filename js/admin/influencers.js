@@ -63,6 +63,7 @@ App.Admin.Influencers = (function ($) {
                 <tr>
                   <th>#</th><th>${t('name')}</th><th>${t('email')}</th>
                   <th>${t('phone')}</th><th>Categories</th><th>${t('platform')}</th>
+                  <th>Followers</th>
                   <th>Campaigns</th><th>Conversions</th>
                   <th>${t('status')}</th><th>${t('actions')}</th>
                 </tr>
@@ -76,7 +77,7 @@ App.Admin.Influencers = (function ($) {
       <!-- Modal -->
       <div id="modal-influencer" style="display:none">
         <div class="modal-overlay">
-          <div class="modal-box">
+          <div class="modal-box modal-xl">
             <div class="modal-header">
               <span class="modal-title" id="modal-inf-title">${t('add_influencer')}</span>
               <button class="modal-close" id="btn-close-modal-inf">✕</button>
@@ -209,6 +210,20 @@ App.Admin.Influencers = (function ($) {
                 });
                 html += '</div>';
                 return html;
+              }
+            },
+            { data: 'platforms_list', orderable: true, render: function(d){
+                if (!d) return '<span style="color:var(--text-muted)">—</span>';
+                var total = 0;
+                d.split(',').forEach(function(platItem){
+                  var parts = platItem.split(':');
+                  if (parts[2]) total += parseInt(parts[2]) || 0;
+                });
+                if (total <= 0) return '<span style="color:var(--text-muted)">—</span>';
+                var fmt = total >= 1000000 ? (total/1000000).toFixed(1)+'M'
+                         : total >= 1000   ? (total/1000).toFixed(1)+'K'
+                         : total;
+                return '<span style="font-weight:700;color:var(--primary)">👥 '+fmt+'</span>';
               }
             },
             { data: 'total_campaigns', render: function(d){ return '<strong>'+d+'</strong>'; }},
