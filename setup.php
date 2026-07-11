@@ -122,6 +122,9 @@ try {
     if (!in_array('profile_locked', $cols)) {
         run($db, "ALTER TABLE `users` ADD COLUMN `profile_locked` TINYINT(1) DEFAULT 0 AFTER `avatar`", "Migration: Add profile_locked column to users table", $log, $errors);
     }
+    if (!in_array('company_category', $cols)) {
+        run($db, "ALTER TABLE `users` ADD COLUMN `company_category` VARCHAR(100) DEFAULT NULL AFTER `role`", "Migration: Add company_category column to users table", $log, $errors);
+    }
 } catch (Exception $e) {}
 
 // Migration: products client columns
@@ -136,6 +139,21 @@ try {
     }
     if (!in_array('cpl_rate', $cols)) {
         run($db, "ALTER TABLE `products` ADD COLUMN `cpl_rate` DECIMAL(10,3) DEFAULT 0.000 AFTER `cpc_rate`", "Migration: Add cpl_rate column to products table", $log, $errors);
+    }
+    if (!in_array('image_url_1', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `image_url_1` VARCHAR(500) DEFAULT NULL AFTER `image_url`", "Migration: Add image_url_1 to products table", $log, $errors);
+    }
+    if (!in_array('image_url_2', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `image_url_2` VARCHAR(500) DEFAULT NULL AFTER `image_url_1`", "Migration: Add image_url_2 to products table", $log, $errors);
+    }
+    if (!in_array('image_url_3', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `image_url_3` VARCHAR(500) DEFAULT NULL AFTER `image_url_2`", "Migration: Add image_url_3 to products table", $log, $errors);
+    }
+    if (!in_array('video_url', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `video_url` VARCHAR(500) DEFAULT NULL AFTER `image_url_3`", "Migration: Add video_url to products table", $log, $errors);
+    }
+    if (!in_array('display_platform', $cols)) {
+        run($db, "ALTER TABLE `products` ADD COLUMN `display_platform` VARCHAR(50) DEFAULT NULL AFTER `video_url`", "Migration: Add display_platform to products table", $log, $errors);
     }
 } catch (Exception $e) {}
 

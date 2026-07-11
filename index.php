@@ -179,6 +179,7 @@ header("Pragma: no-cache");
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.2.6"></script>
+<script src="js/client/products.js?v=1.2.6"></script>
 <script src="js/client/crm.js?v=1.2.6"></script>
 <script src="js/client/wallet.js?v=1.2.6"></script>
 

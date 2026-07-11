@@ -52,6 +52,37 @@ App.api = (function ($) {
     return deferred.promise();
   }
 
+  function _requestMultipart(endpoint, action, formData) {
+    var url = BASE + endpoint + '.php?action=' + action;
+    var deferred = $.Deferred();
+
+    $.ajax({
+      url: url,
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      dataType: 'json'
+    })
+    .done(function (res) {
+      if (res && res.success === false) {
+        deferred.reject(res);
+      } else {
+        deferred.resolve(res);
+      }
+    })
+    .fail(function (xhr) {
+      var res;
+      try { res = JSON.parse(xhr.responseText); } catch (e) { res = {}; }
+      deferred.reject({
+        success: false,
+        message: res.message || 'Server error. Please try again.',
+      });
+    });
+
+    return deferred.promise();
+  }
+
   /* ── Auth ─────────────────────────────────── */
   var auth = {
     login:  function (d) { return _request('auth', 'login',  d, 'POST'); },
@@ -120,6 +151,15 @@ App.api = (function ($) {
     callHistory:   function (eId)  { return _request('client_analytics', 'call_history', {event_id: eId}, 'GET'); },
   };
 
+  /* ── Client Products ─────────────────────── */
+  var clientProducts = {
+    list:          function ()     { return _request('client_products', 'list', {}, 'GET'); },
+    get:           function (id)   { return _request('client_products', 'get', {id: id}, 'GET'); },
+    create:        function (fd)   { return _requestMultipart('client_products', 'create', fd); },
+    update:        function (fd)   { return _requestMultipart('client_products', 'update', fd); },
+    delete:        function (id)   { return _request('client_products', 'delete', {id: id}, 'POST'); },
+  };
+
   /* ── Analytics ───────────────────────────── */
   var analytics = {
     overview:      function ()     { return _request('analytics', 'overview',      {}, 'GET'); },
@@ -165,6 +205,6 @@ App.api = (function ($) {
     return msg;
   }
 
-  return { auth, users, products, campaigns, analytics, points, wallet, landing, clients, clientAnalytics, handleError };
+  return { auth, users, products, campaigns, analytics, points, wallet, landing, clients, clientAnalytics, clientProducts, handleError };
 
 }(jQuery));

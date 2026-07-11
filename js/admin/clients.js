@@ -89,9 +89,23 @@ App.Admin.Clients = (function ($) {
             <div class="modal-body">
               <form id="form-client" autocomplete="off">
                 <input type="hidden" id="client-id">
-                <div class="form-group">
-                  <label class="form-label">Company / Client Name <span class="req">*</span></label>
-                  <input type="text" class="form-control" id="client-name" placeholder="Enter company name" required>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label">Company / Client Name <span class="req">*</span></label>
+                    <input type="text" class="form-control" id="client-name" placeholder="Enter company name" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Company Category <span class="req">*</span></label>
+                    <select class="form-control" id="client-company-category" required>
+                      <option value="">— Select Category —</option>
+                      <option value="Foody">🍔 Foody</option>
+                      <option value="Hotels">🏨 Hotels</option>
+                      <option value="Clothing">👗 Clothing</option>
+                      <option value="Electronics">📱 Electronics</option>
+                      <option value="Services">🛠️ Services</option>
+                      <option value="Other">📦 Other</option>
+                    </select>
+                  </div>
                 </div>
                 <div class="grid-2">
                   <div class="form-group">
@@ -281,7 +295,7 @@ App.Admin.Clients = (function ($) {
                 <td>Client #${c.id}</td>
                 <td>
                   <strong style="color:var(--primary); font-size:0.95rem">${c.name}</strong>
-                  <div style="font-size:0.75rem; color:var(--text-muted)">Joined ${new Date(c.created_at).toLocaleDateString()}</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted)">Joined ${new Date(c.created_at).toLocaleDateString()} | Category: <strong>${c.company_category || 'Other'}</strong></div>
                 </td>
                 <td>${c.email}</td>
                 <td>${c.country_code} ${c.phone || '-'}</td>
@@ -319,6 +333,7 @@ App.Admin.Clients = (function ($) {
       _editId = null;
       $('#form-client')[0].reset();
       $('#client-id').val('');
+      $('#client-company-category').val('');
       $('#modal-client-title').text('🏢 Add New Client Account');
       $('#client-pass-req').show();
       $('#client-password').prop('required', true);
@@ -345,6 +360,7 @@ App.Admin.Clients = (function ($) {
         password:       $('#client-password').val(),
         phone:          $('#client-phone').val().trim(),
         country_code:   $('#client-country-code').val(),
+        company_category: $('#client-company-category').val(),
         status:         $('#client-status').val(),
         profile_locked: $('#client-profile-locked').is(':checked') ? 1 : 0
       };
@@ -379,6 +395,7 @@ App.Admin.Clients = (function ($) {
           $('#client-pass-req').hide();
           $('#client-phone').val(c.phone || '');
           $('#client-country-code').val(c.country_code || '+973');
+          $('#client-company-category').val(c.company_category || '');
           $('#client-status').val(c.status);
           $('#client-profile-locked').prop('checked', parseInt(c.profile_locked) === 1);
 

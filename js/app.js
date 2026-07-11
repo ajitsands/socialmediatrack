@@ -24,6 +24,7 @@ App.router = (function ($) {
     'influencer/wallet':   function(){ App.Influencer.Wallet.init(); },
     'influencer/profile':  function(){ App.Influencer.Profile.init(); },
     'client/dashboard':    function(){ App.Client.Dashboard.init(); },
+    'client/products':     function(){ App.Client.Products.init(); },
     'client/wallet':       function(){ App.Client.Wallet.init(); },
     'client/crm':          function(){ App.Client.Crm.init(); },
   };
@@ -126,6 +127,7 @@ App.router = (function ($) {
       'influencer/wallet':   App.i18n.t('my_wallet'),
       'influencer/profile':  'Profile Settings',
       'client/dashboard':    'Client Dashboard',
+      'client/products':     'Manage My Products',
       'client/wallet':       'My Wallet Ledger',
       'client/crm':          'Important Leads CRM',
     };
@@ -173,6 +175,9 @@ App.router = (function ($) {
         <div class="nav-section-label">Client Menu</div>
         <a class="nav-item" data-route="client/dashboard" href="#/client/dashboard">
           <span class="nav-icon">📊</span><span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-route="client/products" href="#/client/products">
+          <span class="nav-icon">📦</span><span>My Products</span>
         </a>
         <a class="nav-item" data-route="client/crm" href="#/client/crm">
           <span class="nav-icon">📞</span><span>CRM & Follow-ups</span>
