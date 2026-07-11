@@ -239,7 +239,7 @@ if ($action === 'convert') {
     // Build redirect URL
     $redirectUrl = $camp['product_url'] ?: '#';
     if ($redirectUrl && $camp['discount_value'] > 0) {
-        $sep = str_contains($redirectUrl, '?') ? '&' : '?';
+        $sep = (strpos($redirectUrl, '?') !== false) ? '&' : '?';
         $redirectUrl .= "{$sep}promo={$camp['offer_code']}&discount={$camp['discount_value']}";
     }
 
@@ -311,7 +311,7 @@ if ($action === 'convert') {
     // Build redirect URL with discount info
     $redirectUrl = $camp['product_url'] ?: '#';
     if ($redirectUrl && $camp['discount_value'] > 0) {
-        $sep = str_contains($redirectUrl, '?') ? '&' : '?';
+        $sep = (strpos($redirectUrl, '?') !== false) ? '&' : '?';
         $redirectUrl .= "{$sep}promo={$camp['offer_code']}&discount={$camp['discount_value']}";
     }
 

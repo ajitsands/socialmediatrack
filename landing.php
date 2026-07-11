@@ -135,7 +135,7 @@ header("Pragma: no-cache");
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/countries.js?v=1.0.4"></script>
-<script src="js/landing/page.js?v=1.0.5"></script>
+<script src="js/landing/page.js?v=1.0.6"></script>
 
 <script>
 // ── Generate floating particles ─────────────────

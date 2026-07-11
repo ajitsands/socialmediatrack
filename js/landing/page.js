@@ -230,8 +230,15 @@
       }));
       launchConfetti();
       showSuccess(res.data.offer_code, res.data.redirect_url);
-    }).fail(function () {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.' });
+    }).fail(function (xhr) {
+      var msg = 'Something went wrong. Please try again.';
+      try {
+        var res = JSON.parse(xhr.responseText);
+        if (res && res.message) {
+          msg = res.message;
+        }
+      } catch (e) {}
+      Swal.fire({ icon: 'error', title: 'Error', text: msg });
       $btn.prop('disabled', false).text(m('submit_btn'));
     });
   }
