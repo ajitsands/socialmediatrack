@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `platform`      ENUM('instagram','tiktok','youtube','facebook','twitter','other') DEFAULT 'instagram',
   `status`        ENUM('active','inactive') DEFAULT 'active',
   `avatar`        VARCHAR(500),
+  `follower_count` INT           DEFAULT 0,
   `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `user_platforms` (
   `user_id`       INT NOT NULL,
   `platform`      VARCHAR(50) NOT NULL,
   `social_handle` VARCHAR(100),
+  `follower_count` INT DEFAULT 0,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: user_platforms", $log, $errors);
@@ -124,6 +126,17 @@ try {
     }
     if (!in_array('company_category', $cols)) {
         run($db, "ALTER TABLE `users` ADD COLUMN `company_category` VARCHAR(100) DEFAULT NULL AFTER `role`", "Migration: Add company_category column to users table", $log, $errors);
+    }
+    if (!in_array('follower_count', $cols)) {
+        run($db, "ALTER TABLE `users` ADD COLUMN `follower_count` INT DEFAULT 0 AFTER `avatar`", "Migration: Add follower_count column to users table", $log, $errors);
+    }
+} catch (Exception $e) {}
+
+// Migration: user_platforms follower_count column
+try {
+    $upCols = $db->query("DESCRIBE `user_platforms`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('follower_count', $upCols)) {
+        run($db, "ALTER TABLE `user_platforms` ADD COLUMN `follower_count` INT DEFAULT 0", "Migration: Add follower_count column to user_platforms table", $log, $errors);
     }
 } catch (Exception $e) {}
 
