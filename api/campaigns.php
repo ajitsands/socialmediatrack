@@ -229,4 +229,206 @@ if ($action === 'delete') {
     }
 }
 
+// ─── Create Campaign Request ───────────────────
+if ($action === 'create_request') {
+    requireAuth();
+    $sess = $_SESSION;
+    if ($sess['role'] !== 'client') {
+        apiError('Unauthorized. Only clients can request influencer campaigns.', 403);
+    }
+    
+    $productId    = (int)($input['product_id'] ?? 0);
+    $influencerId = (int)($input['influencer_id'] ?? 0);
+    $platform     = sanitize($input['platform'] ?? '');
+    $discountType = in_array($input['discount_type'] ?? 'percent', ['percent','fixed']) ? $input['discount_type'] : 'percent';
+    $discountVal  = (float)($input['discount_value'] ?? 0);
+
+    if (!$productId || !$influencerId || !$platform) {
+        apiError('Product, influencer, and target platform are required.');
+    }
+
+    // Verify product ownership by client
+    $prodChk = $db->prepare("SELECT id FROM products WHERE id=? AND client_id=?");
+    $prodChk->execute([$productId, $sess['user_id']]);
+    if (!$prodChk->fetch()) {
+        apiError('Product not found or unauthorized access.', 404);
+    }
+
+    // Verify influencer exists
+    $infChk = $db->prepare("SELECT id FROM users WHERE id=? AND role='influencer' AND status='active'");
+    $infChk->execute([$influencerId]);
+    if (!$infChk->fetch()) {
+        apiError('Target influencer is not active or not found.', 404);
+    }
+
+    // Verify if duplicate request already exists (either approved or pending)
+    $dup = $db->prepare("SELECT id FROM campaign_requests WHERE product_id=? AND influencer_id=? AND platform=? AND status IN ('pending','approved') LIMIT 1");
+    $dup->execute([$productId, $influencerId, $platform]);
+    if ($dup->fetch()) {
+        apiError('A campaign request or approved campaign already exists for this product, influencer, and platform.');
+    }
+
+    // Insert request
+    $stmt = $db->prepare("
+        INSERT INTO campaign_requests (client_id, influencer_id, product_id, platform, discount_type, discount_value, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+    ");
+    $stmt->execute([$sess['user_id'], $influencerId, $productId, $platform, $discountType, $discountVal]);
+
+    apiSuccess([], 'Campaign request sent successfully!');
+}
+
+// ─── List Campaign Requests ────────────────────
+if ($action === 'list_requests') {
+    requireAuth();
+    $sess = $_SESSION;
+
+    if ($sess['role'] === 'influencer') {
+        // Return requests directed to this influencer
+        $stmt = $db->prepare("
+            SELECT cr.*, p.name as product_name, p.category as product_category, p.product_url, p.image_url,
+                   c.name as client_name, c.email as client_email
+            FROM campaign_requests cr
+            JOIN products p ON p.id = cr.product_id
+            JOIN users c ON c.id = cr.client_id
+            WHERE cr.influencer_id = ?
+            ORDER BY cr.created_at DESC
+        ");
+        $stmt->execute([$sess['user_id']]);
+        apiSuccess($stmt->fetchAll());
+    } elseif ($sess['role'] === 'client') {
+        // Return requests sent by this client
+        $stmt = $db->prepare("
+            SELECT cr.*, p.name as product_name, p.image_url,
+                   i.name as influencer_name, i.social_handle
+            FROM campaign_requests cr
+            JOIN products p ON p.id = cr.product_id
+            JOIN users i ON i.id = cr.influencer_id
+            WHERE cr.client_id = ?
+            ORDER BY cr.created_at DESC
+        ");
+        $stmt->execute([$sess['user_id']]);
+        apiSuccess($stmt->fetchAll());
+    } else {
+        // Admin: return all requests
+        $stmt = $db->query("
+            SELECT cr.*, p.name as product_name, p.image_url,
+                   i.name as influencer_name, c.name as client_name
+            FROM campaign_requests cr
+            JOIN products p ON p.id = cr.product_id
+            JOIN users i ON i.id = cr.influencer_id
+            JOIN users c ON c.id = cr.client_id
+            ORDER BY cr.created_at DESC
+        ");
+        apiSuccess($stmt->fetchAll());
+    }
+}
+
+// ─── Respond Campaign Request ──────────────────
+if ($action === 'respond_request') {
+    requireAuth();
+    $sess = $_SESSION;
+    if ($sess['role'] !== 'influencer') {
+        apiError('Unauthorized. Only influencers can respond to campaign requests.', 403);
+    }
+
+    $requestId = (int)($input['id'] ?? 0);
+    $status    = in_array($input['status'] ?? '', ['approved','declined']) ? $input['status'] : null;
+
+    if (!$requestId || !$status) {
+        apiError('Request ID and valid status are required.');
+    }
+
+    // Verify ownership of request
+    $reqStmt = $db->prepare("SELECT * FROM campaign_requests WHERE id=? AND influencer_id=? AND status='pending'");
+    $reqStmt->execute([$requestId, $sess['user_id']]);
+    $request = $reqStmt->fetch();
+    if (!$request) {
+        apiError('Pending request not found or unauthorized access.', 404);
+    }
+
+    if ($status === 'declined') {
+        $upd = $db->prepare("UPDATE campaign_requests SET status='declined' WHERE id=?");
+        $upd->execute([$requestId]);
+        apiSuccess([], 'Request declined successfully.');
+    }
+
+    // If approved, generate campaign
+    $productId    = (int)$request['product_id'];
+    $infId        = (int)$request['influencer_id'];
+    $plat         = $request['platform'];
+    $discountType = $request['discount_type'];
+    $discountVal  = (float)$request['discount_value'];
+
+    // Double check if campaign already exists for influencer + product + platform
+    $existStmt = $db->prepare("
+        SELECT id FROM campaigns 
+        WHERE product_id=? AND influencer_id=? AND platform=? AND status='active' 
+        LIMIT 1
+    ");
+    $existStmt->execute([$productId, $infId, $plat]);
+    if ($existStmt->fetch()) {
+        // Already exists, just mark request as approved to keep things clean
+        $upd = $db->prepare("UPDATE campaign_requests SET status='approved' WHERE id=?");
+        $upd->execute([$requestId]);
+        apiSuccess([], 'Campaign already active. Request marked as approved.');
+    }
+
+    // Get influencer name
+    $uStmt = $db->prepare("SELECT name FROM users WHERE id=?");
+    $uStmt->execute([$infId]);
+    $infName = $uStmt->fetchColumn() ?: 'Influencer';
+
+    // Get product index
+    $pIdxStmt = $db->query("SELECT id FROM products ORDER BY id ASC");
+    $pAll     = array_column($pIdxStmt->fetchAll(), 'id');
+    $pIndex   = (array_search($productId, $pAll) ?: 0) + 1;
+
+    // Generate offer code
+    $attempts = 0;
+    do {
+        $code = generateOfferCode($infName, $pIndex);
+        $dup  = $db->prepare("SELECT id FROM campaigns WHERE offer_code=?");
+        $dup->execute([$code]);
+        $attempts++;
+    } while ($dup->fetch() && $attempts < 10);
+
+    // Generate encrypted token
+    $tokenData = [
+        'campaign_id'   => null,
+        'influencer_id' => $infId,
+        'product_id'    => $productId,
+        'offer_code'    => $code,
+        'platform'      => $plat,
+        'ts'            => time(),
+    ];
+    $tmpToken = encryptToken($tokenData);
+
+    // Insert campaign
+    $stmt = $db->prepare("
+        INSERT INTO campaigns (product_id, influencer_id, offer_code, ref_token, discount_type, discount_value, platform, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+    ");
+    $stmt->execute([$productId, $infId, $code, $tmpToken, $discountType, $discountVal, $plat]);
+    $campId = (int)$db->lastInsertId();
+
+    // Regenerate token with correct campaign_id
+    $tokenData['campaign_id'] = $campId;
+    $finalToken = encryptToken($tokenData);
+    $updStmt = $db->prepare("UPDATE campaigns SET ref_token=? WHERE id=?");
+    $updStmt->execute([$finalToken, $campId]);
+
+    // Update request status to approved
+    $upd = $db->prepare("UPDATE campaign_requests SET status='approved' WHERE id=?");
+    $upd->execute([$requestId]);
+
+    apiSuccess([
+        'campaign_id' => $campId,
+        'offer_code'  => $code,
+        'platform'    => $plat,
+        'landing_url' => LANDING_URL . '?ref=' . $finalToken
+    ], 'Campaign approved and generated successfully!');
+}
+
 apiError('Invalid action');
+

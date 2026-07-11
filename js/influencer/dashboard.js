@@ -181,19 +181,34 @@ App.Influencer.Dashboard = (function ($) {
 App.Influencer.Campaigns = (function ($) {
   'use strict';
   var _dt = null;
+  var _dtRequests = null;
 
   function init() {
     if (!App.auth.requireAuth('influencer')) return;
     renderPage();
     loadCampaigns();
+    loadRequestsCount();
   }
 
   function renderPage() {
     $('#page-content').html(`
       <div class="page-header">
-        <div><h2>🔗 My Campaigns</h2><p class="page-subtitle">All your active tracking links</p></div>
+        <div><h2>🔗 My Campaigns</h2><p class="page-subtitle">All your active tracking links and product requests</p></div>
       </div>
-      <div class="card">
+
+      <!-- Tabs header -->
+      <div style="display:flex; gap:16px; margin-bottom:20px; border-bottom:1.5px solid var(--border); padding-bottom:0">
+        <button class="tab-link active" data-target="campaigns" style="background:none; border:none; color:var(--primary); font-weight:700; font-size:1rem; padding:10px 16px; cursor:pointer; position:relative; outline:none; border-bottom:2px solid var(--primary)">
+          🔗 Running Campaigns
+        </button>
+        <button class="tab-link" data-target="requests" style="background:none; border:none; color:var(--text-muted); font-weight:600; font-size:1rem; padding:10px 16px; cursor:pointer; position:relative; outline:none; display:flex; align-items:center; gap:6px">
+          ✉️ Incoming Requests
+          <span class="badge badge-accent" id="requests-badge-count" style="display:none; font-size:0.75rem; padding:2px 6px; border-radius:10px; font-weight:800; background:#EF4444; color:#fff">0</span>
+        </button>
+      </div>
+
+      <!-- Running Campaigns Panel -->
+      <div id="panel-active-campaigns" class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <span class="card-title">🔗 Campaigns List</span>
           <div style="display:flex;align-items:center;gap:8px">
@@ -212,6 +227,33 @@ App.Influencer.Campaigns = (function ($) {
                 <tr><th>#</th><th>Product</th><th>Platform</th><th>Offer Code</th><th>Discount</th><th>Clicks</th><th>Conversions</th><th>Rate</th><th>Earned</th><th>Status</th><th>Link</th></tr>
               </thead>
               <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Incoming Requests Panel -->
+      <div id="panel-incoming-requests" class="card" style="display:none">
+        <div class="card-header">
+          <span class="card-title">✉️ Product Requests</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper" style="padding:16px">
+            <table id="tbl-incoming-requests" class="dataTable" style="width:100%">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product</th>
+                  <th>Product URL</th>
+                  <th>Platform</th>
+                  <th>Offer Discount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-incoming-requests-body">
+                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -283,6 +325,104 @@ App.Influencer.Campaigns = (function ($) {
     }).fail(App.api.handleError);
   }
 
+  function loadRequestsCount() {
+    App.api.campaigns.listRequests().done(function(res){
+      var pending = (res.data || []).filter(function(r){ return r.status === 'pending'; });
+      if (pending.length > 0) {
+        $('#requests-badge-count').text(pending.length).show();
+      } else {
+        $('#requests-badge-count').hide();
+      }
+    });
+  }
+
+  function loadIncomingRequests() {
+    App.api.campaigns.listRequests().done(function(res){
+      var data = res.data || [];
+      var rows = '';
+      if (data.length === 0) {
+        rows = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
+      } else {
+        data.forEach(function(r, idx){
+          var platIcons = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'👍', twitter:'🐦', other:'🌐'};
+          var icon = platIcons[r.platform] || '🌐';
+          var discountHtml = '';
+          if (parseFloat(r.discount_value) > 0) {
+            discountHtml = r.discount_type === 'percent' ? r.discount_value + '% OFF' : 'BHD ' + parseFloat(r.discount_value).toFixed(3) + ' OFF';
+          } else {
+            discountHtml = '<span class="badge badge-muted">None</span>';
+          }
+          
+          var actionsHtml = '';
+          var statusHtml = '';
+          if (r.status === 'pending') {
+            statusHtml = '<span class="badge badge-warning">Pending Approval</span>';
+            actionsHtml = `
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-success btn-sm btn-approve-request" data-id="${r.id}" style="padding:4px 10px;font-size:0.8rem;font-weight:700">Approve</button>
+                <button class="btn btn-danger btn-sm btn-decline-request" data-id="${r.id}" style="padding:4px 10px;font-size:0.8rem;font-weight:700">Decline</button>
+              </div>
+            `;
+          } else if (r.status === 'approved') {
+            statusHtml = '<span class="badge badge-success">Approved</span>';
+            actionsHtml = '<span style="font-size:0.82rem;color:var(--text-muted);font-weight:600">No action</span>';
+          } else {
+            statusHtml = '<span class="badge badge-danger">Declined</span>';
+            actionsHtml = '<span style="font-size:0.82rem;color:var(--text-muted);font-weight:600">No action</span>';
+          }
+
+          rows += `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <img src="${r.image_url || 'assets/images/default_product.png'}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border)" />
+                  <div>
+                    <strong>${r.product_name}</strong>
+                    <div style="font-size:0.7rem;color:var(--text-muted)">Category: ${r.product_category || 'Other'}</div>
+                  </div>
+                </div>
+              </td>
+              <td><a href="${r.product_url}" target="_blank" class="badge badge-muted" style="text-decoration:none;color:var(--primary);font-weight:700">🌐 Visit URL ↗</a></td>
+              <td><span class="badge platform-${r.platform}">${icon} ${r.platform.toUpperCase()}</span></td>
+              <td><strong class="badge badge-accent">${discountHtml}</strong></td>
+              <td>${statusHtml}</td>
+              <td>${actionsHtml}</td>
+            </tr>
+          `;
+        });
+      }
+
+      if (_dtRequests) { _dtRequests.destroy(); _dtRequests = null; }
+      $('#tbl-incoming-requests-body').html(rows);
+      if (data.length > 0) {
+        _dtRequests = $('#tbl-incoming-requests').DataTable({
+          pageLength: 10,
+          retrieve: true,
+          order: [[0, 'asc']]
+        });
+      }
+    }).fail(App.api.handleError);
+  }
+
+  // Bind tab links click
+  $(document).off('click', '.tab-link').on('click', '.tab-link', function (e) {
+    e.preventDefault();
+    $('.tab-link').removeClass('active').css({ 'color': 'var(--text-muted)', 'font-weight': '600', 'border-bottom': 'none' });
+    $(this).addClass('active').css({ 'color': 'var(--primary)', 'font-weight': '700', 'border-bottom': '2px solid var(--primary)' });
+    
+    var target = $(this).data('target');
+    if (target === 'campaigns') {
+      $('#panel-active-campaigns').show();
+      $('#panel-incoming-requests').hide();
+      loadCampaigns();
+    } else {
+      $('#panel-active-campaigns').hide();
+      $('#panel-incoming-requests').show();
+      loadIncomingRequests();
+    }
+  });
+
   $(document).on('change', '.toggle-camp-status', function () {
     var $chk = $(this);
     var id = $chk.data('id');
@@ -315,6 +455,68 @@ App.Influencer.Campaigns = (function ($) {
   $(document).on('click','.btn-copy-camp-link', function(){
     var link = window.location.origin + window.location.pathname.replace('index.php','') + $(this).data('link');
     navigator.clipboard.writeText(link).then(function(){ Swal.fire({icon:'success',title:'Link Copied!',showConfirmButton:false,timer:1200}); }).catch(function(){ prompt('Copy link:', link); });
+  });
+
+  // Approve request
+  $(document).off('click', '.btn-approve-request').on('click', '.btn-approve-request', function (e) {
+    e.preventDefault();
+    var reqId = parseInt($(this).data('id'));
+    
+    Swal.fire({
+      title: 'Approve Request?',
+      text: 'This will automatically generate a tracking campaign link for this product on your specified platform.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Approve',
+      confirmButtonColor: '#22C55E',
+      cancelButtonText: 'Cancel'
+    }).then(function (result) {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Generating campaign...',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+        App.api.campaigns.respondRequest({ id: reqId, status: 'approved' })
+          .done(function (res) {
+            Swal.fire({ icon: 'success', title: 'Approved!', text: 'Campaign generated successfully. Copy the link from your campaign list!', confirmButtonColor: '#6C63FF' });
+            loadRequestsCount();
+            loadIncomingRequests();
+          })
+          .fail(App.api.handleError);
+      }
+    });
+  });
+
+  // Decline request
+  $(document).off('click', '.btn-decline-request').on('click', '.btn-decline-request', function (e) {
+    e.preventDefault();
+    var reqId = parseInt($(this).data('id'));
+    
+    Swal.fire({
+      title: 'Decline Request?',
+      text: 'Are you sure you want to decline this campaign invitation? The client will see that the request has been declined.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Decline',
+      confirmButtonColor: '#EF4444',
+      cancelButtonText: 'Cancel'
+    }).then(function (result) {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Processing...',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+        App.api.campaigns.respondRequest({ id: reqId, status: 'declined' })
+          .done(function (res) {
+            Swal.fire({ icon: 'success', title: 'Declined', text: 'The request has been declined.', confirmButtonColor: '#6C63FF' });
+            loadRequestsCount();
+            loadIncomingRequests();
+          })
+          .fail(App.api.handleError);
+      }
+    });
   });
 
   return { init };

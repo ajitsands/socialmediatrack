@@ -119,12 +119,15 @@ App.api = (function ($) {
 
   /* ── Campaigns ───────────────────────────── */
   var campaigns = {
-    list:         function ()  { return _request('campaigns', 'list', {}, 'GET'); },
-    get:          function (id){ return _request('campaigns', 'get', {id: id}, 'GET'); },
-    generate:     function (d) { return _request('campaigns', 'generate', d, 'POST'); },
-    updateStatus: function (d) { return _request('campaigns', 'update_status', d, 'POST'); },
-    delete:       function (id){ return _request('campaigns', 'delete', {id: id}, 'POST'); },
-    deleteBulk:   function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
+    list:           function ()  { return _request('campaigns', 'list', {}, 'GET'); },
+    get:            function (id){ return _request('campaigns', 'get', {id: id}, 'GET'); },
+    generate:       function (d) { return _request('campaigns', 'generate', d, 'POST'); },
+    updateStatus:   function (d) { return _request('campaigns', 'update_status', d, 'POST'); },
+    delete:         function (id){ return _request('campaigns', 'delete', {id: id}, 'POST'); },
+    deleteBulk:     function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
+    createRequest:  function (d) { return _request('campaigns', 'create_request', d, 'POST'); },
+    listRequests:   function ()  { return _request('campaigns', 'list_requests', {}, 'GET'); },
+    respondRequest: function (d) { return _request('campaigns', 'respond_request', d, 'POST'); },
   };
 
   /* ── Clients ─────────────────────────────── */

@@ -105,6 +105,24 @@ CREATE TABLE IF NOT EXISTS `campaigns` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: campaigns", $log, $errors);
 
+run($db, "
+CREATE TABLE IF NOT EXISTS `campaign_requests` (
+  `id`              INT AUTO_INCREMENT PRIMARY KEY,
+  `client_id`       INT NOT NULL,
+  `influencer_id`   INT NOT NULL,
+  `product_id`      INT NOT NULL,
+  `platform`        VARCHAR(50) NOT NULL,
+  `discount_type`   ENUM('percent','fixed') DEFAULT 'percent',
+  `discount_value`  DECIMAL(10,2) DEFAULT 0.00,
+  `status`          ENUM('pending','approved','declined') DEFAULT 'pending',
+  `created_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`client_id`)     REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`influencer_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`product_id`)    REFERENCES `products`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+", "Table: campaign_requests", $log, $errors);
+
 // Run migration for existing campaigns table if it was already created without platform
 try {
     $cols = $db->query("DESCRIBE `campaigns`")->fetchAll(PDO::FETCH_COLUMN);

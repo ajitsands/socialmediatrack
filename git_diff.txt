@@ -1,0 +1,856 @@
+﻿diff --git a/api/campaigns.php b/api/campaigns.php
+index 260a1f9..b22c202 100644
+--- a/api/campaigns.php
++++ b/api/campaigns.php
+@@ -229,4 +229,206 @@ if ($action === 'delete') {
+     }
+ }
+ 
++// ΓöÇΓöÇΓöÇ Create Campaign Request ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++if ($action === 'create_request') {
++    requireAuth();
++    $sess = $_SESSION;
++    if ($sess['role'] !== 'client') {
++        apiError('Unauthorized. Only clients can request influencer campaigns.', 403);
++    }
++    
++    $productId    = (int)($input['product_id'] ?? 0);
++    $influencerId = (int)($input['influencer_id'] ?? 0);
++    $platform     = sanitize($input['platform'] ?? '');
++    $discountType = in_array($input['discount_type'] ?? 'percent', ['percent','fixed']) ? $input['discount_type'] : 'percent';
++    $discountVal  = (float)($input['discount_value'] ?? 0);
++
++    if (!$productId || !$influencerId || !$platform) {
++        apiError('Product, influencer, and target platform are required.');
++    }
++
++    // Verify product ownership by client
++    $prodChk = $db->prepare("SELECT id FROM products WHERE id=? AND client_id=?");
++    $prodChk->execute([$productId, $sess['user_id']]);
++    if (!$prodChk->fetch()) {
++        apiError('Product not found or unauthorized access.', 404);
++    }
++
++    // Verify influencer exists
++    $infChk = $db->prepare("SELECT id FROM users WHERE id=? AND role='influencer' AND status='active'");
++    $infChk->execute([$influencerId]);
++    if (!$infChk->fetch()) {
++        apiError('Target influencer is not active or not found.', 404);
++    }
++
++    // Verify if duplicate request already exists (either approved or pending)
++    $dup = $db->prepare("SELECT id FROM campaign_requests WHERE product_id=? AND influencer_id=? AND platform=? AND status IN ('pending','approved') LIMIT 1");
++    $dup->execute([$productId, $influencerId, $platform]);
++    if ($dup->fetch()) {
++        apiError('A campaign request or approved campaign already exists for this product, influencer, and platform.');
++    }
++
++    // Insert request
++    $stmt = $db->prepare("
++        INSERT INTO campaign_requests (client_id, influencer_id, product_id, platform, discount_type, discount_value, status)
++        VALUES (?, ?, ?, ?, ?, ?, 'pending')
++    ");
++    $stmt->execute([$sess['user_id'], $influencerId, $productId, $platform, $discountType, $discountVal]);
++
++    apiSuccess([], 'Campaign request sent successfully!');
++}
++
++// ΓöÇΓöÇΓöÇ List Campaign Requests ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++if ($action === 'list_requests') {
++    requireAuth();
++    $sess = $_SESSION;
++
++    if ($sess['role'] === 'influencer') {
++        // Return requests directed to this influencer
++        $stmt = $db->prepare("
++            SELECT cr.*, p.name as product_name, p.category as product_category, p.product_url, p.image_url,
++                   c.name as client_name, c.email as client_email
++            FROM campaign_requests cr
++            JOIN products p ON p.id = cr.product_id
++            JOIN users c ON c.id = cr.client_id
++            WHERE cr.influencer_id = ?
++            ORDER BY cr.created_at DESC
++        ");
++        $stmt->execute([$sess['user_id']]);
++        apiSuccess($stmt->fetchAll());
++    } elseif ($sess['role'] === 'client') {
++        // Return requests sent by this client
++        $stmt = $db->prepare("
++            SELECT cr.*, p.name as product_name, p.image_url,
++                   i.name as influencer_name, i.social_handle
++            FROM campaign_requests cr
++            JOIN products p ON p.id = cr.product_id
++            JOIN users i ON i.id = cr.influencer_id
++            WHERE cr.client_id = ?
++            ORDER BY cr.created_at DESC
++        ");
++        $stmt->execute([$sess['user_id']]);
++        apiSuccess($stmt->fetchAll());
++    } else {
++        // Admin: return all requests
++        $stmt = $db->query("
++            SELECT cr.*, p.name as product_name, p.image_url,
++                   i.name as influencer_name, c.name as client_name
++            FROM campaign_requests cr
++            JOIN products p ON p.id = cr.product_id
++            JOIN users i ON i.id = cr.influencer_id
++            JOIN users c ON c.id = cr.client_id
++            ORDER BY cr.created_at DESC
++        ");
++        apiSuccess($stmt->fetchAll());
++    }
++}
++
++// ΓöÇΓöÇΓöÇ Respond Campaign Request ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++if ($action === 'respond_request') {
++    requireAuth();
++    $sess = $_SESSION;
++    if ($sess['role'] !== 'influencer') {
++        apiError('Unauthorized. Only influencers can respond to campaign requests.', 403);
++    }
++
++    $requestId = (int)($input['id'] ?? 0);
++    $status    = in_array($input['status'] ?? '', ['approved','declined']) ? $input['status'] : null;
++
++    if (!$requestId || !$status) {
++        apiError('Request ID and valid status are required.');
++    }
++
++    // Verify ownership of request
++    $reqStmt = $db->prepare("SELECT * FROM campaign_requests WHERE id=? AND influencer_id=? AND status='pending'");
++    $reqStmt->execute([$requestId, $sess['user_id']]);
++    $request = $reqStmt->fetch();
++    if (!$request) {
++        apiError('Pending request not found or unauthorized access.', 404);
++    }
++
++    if ($status === 'declined') {
++        $upd = $db->prepare("UPDATE campaign_requests SET status='declined' WHERE id=?");
++        $upd->execute([$requestId]);
++        apiSuccess([], 'Request declined successfully.');
++    }
++
++    // If approved, generate campaign
++    $productId    = (int)$request['product_id'];
++    $infId        = (int)$request['influencer_id'];
++    $plat         = $request['platform'];
++    $discountType = $request['discount_type'];
++    $discountVal  = (float)$request['discount_value'];
++
++    // Double check if campaign already exists for influencer + product + platform
++    $existStmt = $db->prepare("
++        SELECT id FROM campaigns 
++        WHERE product_id=? AND influencer_id=? AND platform=? AND status='active' 
++        LIMIT 1
++    ");
++    $existStmt->execute([$productId, $infId, $plat]);
++    if ($existStmt->fetch()) {
++        // Already exists, just mark request as approved to keep things clean
++        $upd = $db->prepare("UPDATE campaign_requests SET status='approved' WHERE id=?");
++        $upd->execute([$requestId]);
++        apiSuccess([], 'Campaign already active. Request marked as approved.');
++    }
++
++    // Get influencer name
++    $uStmt = $db->prepare("SELECT name FROM users WHERE id=?");
++    $uStmt->execute([$infId]);
++    $infName = $uStmt->fetchColumn() ?: 'Influencer';
++
++    // Get product index
++    $pIdxStmt = $db->query("SELECT id FROM products ORDER BY id ASC");
++    $pAll     = array_column($pIdxStmt->fetchAll(), 'id');
++    $pIndex   = (array_search($productId, $pAll) ?: 0) + 1;
++
++    // Generate offer code
++    $attempts = 0;
++    do {
++        $code = generateOfferCode($infName, $pIndex);
++        $dup  = $db->prepare("SELECT id FROM campaigns WHERE offer_code=?");
++        $dup->execute([$code]);
++        $attempts++;
++    } while ($dup->fetch() && $attempts < 10);
++
++    // Generate encrypted token
++    $tokenData = [
++        'campaign_id'   => null,
++        'influencer_id' => $infId,
++        'product_id'    => $productId,
++        'offer_code'    => $code,
++        'platform'      => $plat,
++        'ts'            => time(),
++    ];
++    $tmpToken = encryptToken($tokenData);
++
++    // Insert campaign
++    $stmt = $db->prepare("
++        INSERT INTO campaigns (product_id, influencer_id, offer_code, ref_token, discount_type, discount_value, platform, status)
++        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
++    ");
++    $stmt->execute([$productId, $infId, $code, $tmpToken, $discountType, $discountVal, $plat]);
++    $campId = (int)$db->lastInsertId();
++
++    // Regenerate token with correct campaign_id
++    $tokenData['campaign_id'] = $campId;
++    $finalToken = encryptToken($tokenData);
++    $updStmt = $db->prepare("UPDATE campaigns SET ref_token=? WHERE id=?");
++    $updStmt->execute([$finalToken, $campId]);
++
++    // Update request status to approved
++    $upd = $db->prepare("UPDATE campaign_requests SET status='approved' WHERE id=?");
++    $upd->execute([$requestId]);
++
++    apiSuccess([
++        'campaign_id' => $campId,
++        'offer_code'  => $code,
++        'platform'    => $plat,
++        'landing_url' => LANDING_URL . '?ref=' . $finalToken
++    ], 'Campaign approved and generated successfully!');
++}
++
+ apiError('Invalid action');
++
+diff --git a/api/client_products.php b/api/client_products.php
+index 53dd23e..cddeefa 100644
+--- a/api/client_products.php
++++ b/api/client_products.php
+@@ -289,6 +289,7 @@ if ($action === 'influencers') {
+         SELECT u.id, u.name, u.avatar,
+                COALESCE(u.follower_count, 0) as primary_followers,
+                (SELECT COALESCE(SUM(follower_count), 0) FROM user_platforms WHERE user_id = u.id) as platform_followers,
++               (SELECT GROUP_CONCAT(platform SEPARATOR ',') FROM user_platforms WHERE user_id = u.id) as platforms_list,
+                GROUP_CONCAT(DISTINCT ic.name SEPARATOR ',') as categories
+         FROM users u
+         LEFT JOIN user_categories uc ON uc.user_id = u.id
+@@ -307,7 +308,8 @@ if ($action === 'influencers') {
+                 'name' => $inf['name'],
+                 'avatar' => $inf['avatar'],
+                 'followers' => max((int)$inf['primary_followers'], (int)$inf['platform_followers']),
+-                'categories' => $inf['categories'] ? explode(',', $inf['categories']) : []
++                'categories' => $inf['categories'] ? explode(',', $inf['categories']) : [],
++                'platforms' => $inf['platforms_list'] ? explode(',', $inf['platforms_list']) : []
+             ];
+         }, $influencers)
+     ]);
+diff --git a/index.php b/index.php
+index 54588b2..ffd57d0 100644
+--- a/index.php
++++ b/index.php
+@@ -160,7 +160,7 @@ header("Pragma: no-cache");
+ <script src="js/i18n.js?v=1.2.6"></script>
+ <script src="js/countries.js?v=1.2.6"></script>
+ <script src="js/auth.js?v=1.2.6"></script>
+-<script src="js/api.js?v=1.3.1"></script>
++<script src="js/api.js?v=1.3.2"></script>
+ 
+ <!-- Admin modules -->
+ <script src="js/admin/dashboard.js?v=1.2.6"></script>
+@@ -173,7 +173,7 @@ header("Pragma: no-cache");
+ <script src="js/admin/wallet.js?v=1.2.6"></script>
+ 
+ <!-- Influencer modules -->
+-<script src="js/influencer/dashboard.js?v=1.2.6"></script>
++<script src="js/influencer/dashboard.js?v=1.2.7"></script>
+ <script src="js/influencer/wallet.js?v=1.2.6"></script>
+ <script src="js/influencer/profile.js?v=1.3.1"></script>
+ 
+@@ -182,7 +182,7 @@ header("Pragma: no-cache");
+ <script src="js/client/products.js?v=1.3.1"></script>
+ <script src="js/client/crm.js?v=1.2.6"></script>
+ <script src="js/client/wallet.js?v=1.2.6"></script>
+-<script src="js/client/influencers.js?v=1.3.0"></script>
++<script src="js/client/influencers.js?v=1.3.1"></script>
+ 
+ <!-- Router (boot last) -->
+ <script src="js/app.js?v=1.2.7"></script>
+diff --git a/js/api.js b/js/api.js
+index d5d4ede..a1e51c2 100644
+--- a/js/api.js
++++ b/js/api.js
+@@ -119,12 +119,15 @@ App.api = (function ($) {
+ 
+   /* ΓöÇΓöÇ Campaigns ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+   var campaigns = {
+-    list:         function ()  { return _request('campaigns', 'list', {}, 'GET'); },
+-    get:          function (id){ return _request('campaigns', 'get', {id: id}, 'GET'); },
+-    generate:     function (d) { return _request('campaigns', 'generate', d, 'POST'); },
+-    updateStatus: function (d) { return _request('campaigns', 'update_status', d, 'POST'); },
+-    delete:       function (id){ return _request('campaigns', 'delete', {id: id}, 'POST'); },
+-    deleteBulk:   function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
++    list:           function ()  { return _request('campaigns', 'list', {}, 'GET'); },
++    get:            function (id){ return _request('campaigns', 'get', {id: id}, 'GET'); },
++    generate:       function (d) { return _request('campaigns', 'generate', d, 'POST'); },
++    updateStatus:   function (d) { return _request('campaigns', 'update_status', d, 'POST'); },
++    delete:         function (id){ return _request('campaigns', 'delete', {id: id}, 'POST'); },
++    deleteBulk:     function (ids){ return _request('campaigns', 'delete', {ids: ids}, 'POST'); },
++    createRequest:  function (d) { return _request('campaigns', 'create_request', d, 'POST'); },
++    listRequests:   function ()  { return _request('campaigns', 'list_requests', {}, 'GET'); },
++    respondRequest: function (d) { return _request('campaigns', 'respond_request', d, 'POST'); },
+   };
+ 
+   /* ΓöÇΓöÇ Clients ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+diff --git a/js/client/influencers.js b/js/client/influencers.js
+index dd2d1fe..349c4eb 100644
+--- a/js/client/influencers.js
++++ b/js/client/influencers.js
+@@ -9,10 +9,17 @@ App.Client = App.Client || {};
+ App.Client.Influencers = (function ($) {
+   'use strict';
+ 
++  var _influencers = [];
++  var _products = [];
++
+   function init() {
+     if (!App.auth.requireAuth('client')) return;
++    _influencers = [];
++    _products = [];
+     renderLayout();
+     loadInfluencersData();
++    loadClientProducts();
++    bindEvents();
+   }
+ 
+   // Format follower count ΓåÆ 1.2K / 170K / 1.5M
+@@ -23,6 +30,11 @@ App.Client.Influencers = (function ($) {
+     return n.toString();
+   }
+ 
++  function escapeHtml(str) {
++    if (!str) return '';
++    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
++  }
++
+   function renderLayout() {
+     $('#page-content').html(`
+       <style>
+@@ -48,45 +60,40 @@ App.Client.Influencers = (function ($) {
+         .influencer-card:hover {
+           transform: translateY(-4px);
+           box-shadow: 0 8px 24px rgba(108, 99, 255, 0.12);
+-          border-color: rgba(108, 99, 255, 0.3);
+         }
+         .influencer-avatar {
+-          width: 76px;
+-          height: 76px;
++          width: 72px;
++          height: 72px;
+           border-radius: 50%;
+-          object-fit: cover;
+-          border: 3px solid var(--border-light);
+-          margin-bottom: 14px;
++          background: linear-gradient(135deg, var(--primary), var(--primary-light));
++          color: #fff;
++          font-size: 1.5rem;
++          font-weight: 800;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+-          font-size: 1.6rem;
+-          font-weight: bold;
+-          color: #fff;
+-          background: linear-gradient(135deg, #6C63FF, #FF6584);
+-          box-shadow: 0 4px 10px rgba(108,99,255,0.2);
++          margin-bottom: 14px;
++          border: 3px solid var(--border-light);
++          overflow: hidden;
++          box-shadow: 0 4px 10px rgba(108,99,255,0.15);
+         }
+         .influencer-avatar img {
+           width: 100%;
+           height: 100%;
+-          border-radius: 50%;
+           object-fit: cover;
+         }
+         .influencer-name {
+           font-size: 1.05rem;
+           font-weight: 700;
+           color: var(--text);
+-          margin: 0 0 6px 0;
++          margin: 0 0 4px 0;
+         }
+         .influencer-followers {
+-          font-size: 0.88rem;
+-          font-weight: 700;
+-          color: var(--primary);
+-          background: rgba(108,99,255,0.08);
+-          padding: 4px 12px;
+-          border-radius: 50px;
++          font-size: 0.8rem;
++          font-weight: 600;
++          color: var(--text-muted);
+           margin-bottom: 12px;
+-          display: inline-flex;
++          display: flex;
+           align-items: center;
+           gap: 4px;
+         }
+@@ -94,7 +101,7 @@ App.Client.Influencers = (function ($) {
+           font-size: 1.25rem;
+           font-weight: 800;
+           color: var(--text);
+-          margin: 0 0 16px 0;
++          margin: 0 0 20px 0;
+           display: flex;
+           align-items: center;
+           gap: 8px;
+@@ -130,6 +137,55 @@ App.Client.Influencers = (function ($) {
+       <div id="other-categories-container">
+         <!-- Grouped by category sections dynamically -->
+       </div>
++
++      <!-- Assign to Product Modal -->
++      <div id="modal-assign-influencer" class="custom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center">
++        <div class="card" style="width:100%; max-width:500px; margin:20px; border-radius:12px">
++          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:16px 20px">
++            <span class="card-title" style="margin:0; font-size:1.2rem; font-weight:700">Γ£¿ Assign to Product</span>
++            <button class="modal-close btn-close-assign-modal" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted)">Γ£ò</button>
++          </div>
++          <div class="card-body" style="padding:20px">
++            <form id="form-assign-influencer" autocomplete="off">
++              <input type="hidden" id="assign-influencer-id" />
++              
++              <div class="form-group" style="margin-bottom:16px">
++                <label class="form-label" style="font-weight:600">Influencer</label>
++                <input type="text" class="form-control" id="assign-influencer-name-display" readonly style="background:var(--border-light); font-weight:700; color:var(--primary)" />
++              </div>
++
++              <div class="form-group" style="margin-bottom:16px">
++                <label class="form-label" style="font-weight:600">Select Your Product <span class="req">*</span></label>
++                <select class="form-control" id="assign-product-id" required style="font-weight:600"></select>
++              </div>
++
++              <div class="form-group" style="margin-bottom:16px">
++                <label class="form-label" style="font-weight:600">Target Social Account / Platform <span class="req">*</span></label>
++                <select class="form-control" id="assign-platform" required style="font-weight:600"></select>
++              </div>
++
++              <div class="grid-2" style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:12px; margin-bottom:16px">
++                <div class="form-group">
++                  <label class="form-label" style="font-weight:600">Offer Campaign Discount Value <span class="req">*</span></label>
++                  <input type="number" step="0.01" min="0" class="form-control" id="assign-discount-value" placeholder="e.g. 10" required />
++                </div>
++                <div class="form-group">
++                  <label class="form-label" style="font-weight:600">Discount Type <span class="req">*</span></label>
++                  <select class="form-control" id="assign-discount-type" required style="font-weight:600">
++                    <option value="percent">Percentage (%)</option>
++                    <option value="fixed">Fixed Amount (BHD)</option>
++                  </select>
++                </div>
++              </div>
++
++              <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid var(--border); padding-top:16px; margin-top:16px">
++                <button type="button" class="btn btn-secondary btn-close-assign-modal">Cancel</button>
++                <button type="submit" class="btn btn-primary" style="font-weight:600">Γ£ë∩╕Å Send Request</button>
++              </div>
++            </form>
++          </div>
++        </div>
++      </div>
+     `);
+   }
+ 
+@@ -139,6 +195,7 @@ App.Client.Influencers = (function ($) {
+         var data = res.data || {};
+         var clientCat = data.client_category || '';
+         var influencers = data.influencers || [];
++        _influencers = influencers;
+ 
+         // Set Niche Badge
+         $('#client-niche-badge').text(clientCat || 'General Niche');
+@@ -192,6 +249,13 @@ App.Client.Influencers = (function ($) {
+       });
+   }
+ 
++  function loadClientProducts() {
++    App.api.clientProducts.list()
++      .done(function (res) {
++        _products = res.data || [];
++      });
++  }
++
+   function renderNicheBlock(matches, clientCat) {
+     var $container = $('#niche-influencers-container');
+     if (matches.length === 0) {
+@@ -278,12 +342,104 @@ App.Client.Influencers = (function ($) {
+         <div class="influencer-followers">
+           ≡ƒæÑ <span>${fmtFollowers(inf.followers)} followers</span>
+         </div>
+-        <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center">
++        <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center; margin-bottom:12px">
+           ${badgesHtml}
+         </div>
++        <div style="width:100%; margin-top:auto">
++          <button class="btn btn-primary btn-sm btn-assign-influencer" data-id="${inf.id}" data-name="${escapeHtml(inf.name)}" style="width:100%; font-weight:600">Γ£¿ Assign to Product</button>
++        </div>
+       </div>
+     `;
+   }
+ 
++  function bindEvents() {
++    // Assign click
++    $(document).off('click', '.btn-assign-influencer').on('click', '.btn-assign-influencer', function (e) {
++      e.preventDefault();
++      var infId = parseInt($(this).data('id'));
++      var infName = $(this).data('name');
++      
++      // Find influencer in cached list
++      var inf = _influencers.find(function (i) { return i.id === infId; });
++      if (!inf) return;
++      
++      $('#assign-influencer-id').val(inf.id);
++      $('#assign-influencer-name-display').val(inf.name);
++      
++      // Populate products select
++      var prodOpts = '<option value="">ΓÇö Select Product ΓÇö</option>';
++      _products.forEach(function (p) {
++        prodOpts += `<option value="${p.id}">${p.name} (${p.category})</option>`;
++      });
++      $('#assign-product-id').html(prodOpts);
++      
++      // Populate platforms select based on influencer platforms
++      var platOpts = '';
++      var plats = inf.platforms || [];
++      if (plats.length === 0) {
++        // Fallback platforms
++        plats = ['instagram', 'tiktok', 'youtube', 'facebook'];
++      }
++      plats.forEach(function (pl) {
++        var labels = {instagram:'≡ƒô╕ Instagram', tiktok:'≡ƒÄ╡ TikTok', youtube:'Γû╢∩╕Å YouTube', facebook:'≡ƒæì Facebook', twitter:'≡ƒÉª Twitter', other:'≡ƒîÉ Other'};
++        var label = labels[pl] || pl.toUpperCase();
++        platOpts += `<option value="${pl}">${label}</option>`;
++      });
++      $('#assign-platform').html(platOpts);
++      
++      // Reset form fields
++      $('#assign-discount-value').val('');
++      $('#assign-discount-type').val('percent');
++      
++      $('#modal-assign-influencer').css('display', 'flex');
++    });
++
++    // Close modal
++    $(document).off('click', '.btn-close-assign-modal').on('click', '.btn-close-assign-modal', function (e) {
++      e.preventDefault();
++      $('#modal-assign-influencer').hide();
++    });
++
++    // Form submit
++    $(document).off('submit', '#form-assign-influencer').on('submit', '#form-assign-influencer', function (e) {
++      e.preventDefault();
++      
++      var data = {
++        influencer_id: parseInt($('#assign-influencer-id').val()),
++        product_id: parseInt($('#assign-product-id').val()),
++        platform: $('#assign-platform').val(),
++        discount_type: $('#assign-discount-type').val(),
++        discount_value: parseFloat($('#assign-discount-value').val() || 0)
++      };
++
++      if (!data.product_id) {
++        Swal.fire({ icon: 'error', title: 'Product Required', text: 'Please select a product to assign.' });
++        return;
++      }
++      if (data.discount_value < 0) {
++        Swal.fire({ icon: 'error', title: 'Invalid Discount', text: 'Discount value cannot be negative.' });
++        return;
++      }
++
++      Swal.fire({
++        title: 'Sending Request...',
++        allowOutsideClick: false,
++        didOpen: () => { Swal.showLoading(); }
++      });
++
++      App.api.campaigns.createRequest(data)
++        .done(function (res) {
++          Swal.fire({
++            icon: 'success',
++            title: 'Request Sent!',
++            text: 'Your campaign request has been sent to the influencer. You will be notified once they approve it.',
++            confirmButtonColor: '#6C63FF'
++          });
++          $('#modal-assign-influencer').hide();
++        })
++        .fail(App.api.handleError);
++    });
++  }
++
+   return { init };
+ })(jQuery);
+diff --git a/js/influencer/dashboard.js b/js/influencer/dashboard.js
+index 050bd73..c79df33 100644
+--- a/js/influencer/dashboard.js
++++ b/js/influencer/dashboard.js
+@@ -181,19 +181,34 @@ App.Influencer.Dashboard = (function ($) {
+ App.Influencer.Campaigns = (function ($) {
+   'use strict';
+   var _dt = null;
++  var _dtRequests = null;
+ 
+   function init() {
+     if (!App.auth.requireAuth('influencer')) return;
+     renderPage();
+     loadCampaigns();
++    loadRequestsCount();
+   }
+ 
+   function renderPage() {
+     $('#page-content').html(`
+       <div class="page-header">
+-        <div><h2>≡ƒöù My Campaigns</h2><p class="page-subtitle">All your active tracking links</p></div>
++        <div><h2>≡ƒöù My Campaigns</h2><p class="page-subtitle">All your active tracking links and product requests</p></div>
+       </div>
+-      <div class="card">
++
++      <!-- Tabs header -->
++      <div style="display:flex; gap:16px; margin-bottom:20px; border-bottom:1.5px solid var(--border); padding-bottom:0">
++        <button class="tab-link active" data-target="campaigns" style="background:none; border:none; color:var(--primary); font-weight:700; font-size:1rem; padding:10px 16px; cursor:pointer; position:relative; outline:none; border-bottom:2px solid var(--primary)">
++          ≡ƒöù Running Campaigns
++        </button>
++        <button class="tab-link" data-target="requests" style="background:none; border:none; color:var(--text-muted); font-weight:600; font-size:1rem; padding:10px 16px; cursor:pointer; position:relative; outline:none; display:flex; align-items:center; gap:6px">
++          Γ£ë∩╕Å Incoming Requests
++          <span class="badge badge-accent" id="requests-badge-count" style="display:none; font-size:0.75rem; padding:2px 6px; border-radius:10px; font-weight:800; background:#EF4444; color:#fff">0</span>
++        </button>
++      </div>
++
++      <!-- Running Campaigns Panel -->
++      <div id="panel-active-campaigns" class="card">
+         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+           <span class="card-title">≡ƒöù Campaigns List</span>
+           <div style="display:flex;align-items:center;gap:8px">
+@@ -216,6 +231,33 @@ App.Influencer.Campaigns = (function ($) {
+           </div>
+         </div>
+       </div>
++
++      <!-- Incoming Requests Panel -->
++      <div id="panel-incoming-requests" class="card" style="display:none">
++        <div class="card-header">
++          <span class="card-title">Γ£ë∩╕Å Product Requests</span>
++        </div>
++        <div class="card-body" style="padding:0">
++          <div class="table-wrapper" style="padding:16px">
++            <table id="tbl-incoming-requests" class="dataTable" style="width:100%">
++              <thead>
++                <tr>
++                  <th>#</th>
++                  <th>Product</th>
++                  <th>Product URL</th>
++                  <th>Platform</th>
++                  <th>Offer Discount</th>
++                  <th>Status</th>
++                  <th>Actions</th>
++                </tr>
++              </thead>
++              <tbody id="tbl-incoming-requests-body">
++                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading requests...</td></tr>
++              </tbody>
++            </table>
++          </div>
++        </div>
++      </div>
+     `);
+   }
+ 
+@@ -283,6 +325,104 @@ App.Influencer.Campaigns = (function ($) {
+     }).fail(App.api.handleError);
+   }
+ 
++  function loadRequestsCount() {
++    App.api.campaigns.listRequests().done(function(res){
++      var pending = (res.data || []).filter(function(r){ return r.status === 'pending'; });
++      if (pending.length > 0) {
++        $('#requests-badge-count').text(pending.length).show();
++      } else {
++        $('#requests-badge-count').hide();
++      }
++    });
++  }
++
++  function loadIncomingRequests() {
++    App.api.campaigns.listRequests().done(function(res){
++      var data = res.data || [];
++      var rows = '';
++      if (data.length === 0) {
++        rows = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">No incoming product requests found.</td></tr>`;
++      } else {
++        data.forEach(function(r, idx){
++          var platIcons = {instagram:'≡ƒô╕', tiktok:'≡ƒÄ╡', youtube:'Γû╢∩╕Å', facebook:'≡ƒæì', twitter:'≡ƒÉª', other:'≡ƒîÉ'};
++          var icon = platIcons[r.platform] || '≡ƒîÉ';
++          var discountHtml = '';
++          if (parseFloat(r.discount_value) > 0) {
++            discountHtml = r.discount_type === 'percent' ? r.discount_value + '% OFF' : 'BHD ' + parseFloat(r.discount_value).toFixed(3) + ' OFF';
++          } else {
++            discountHtml = '<span class="badge badge-muted">None</span>';
++          }
++          
++          var actionsHtml = '';
++          var statusHtml = '';
++          if (r.status === 'pending') {
++            statusHtml = '<span class="badge badge-warning">Pending Approval</span>';
++            actionsHtml = `
++              <div style="display:flex;gap:6px">
++                <button class="btn btn-success btn-sm btn-approve-request" data-id="${r.id}" style="padding:4px 10px;font-size:0.8rem;font-weight:700">Approve</button>
++                <button class="btn btn-danger btn-sm btn-decline-request" data-id="${r.id}" style="padding:4px 10px;font-size:0.8rem;font-weight:700">Decline</button>
++              </div>
++            `;
++          } else if (r.status === 'approved') {
++            statusHtml = '<span class="badge badge-success">Approved</span>';
++            actionsHtml = '<span style="font-size:0.82rem;color:var(--text-muted);font-weight:600">No action</span>';
++          } else {
++            statusHtml = '<span class="badge badge-danger">Declined</span>';
++            actionsHtml = '<span style="font-size:0.82rem;color:var(--text-muted);font-weight:600">No action</span>';
++          }
++
++          rows += `
++            <tr>
++              <td>${idx + 1}</td>
++              <td>
++                <div style="display:flex;align-items:center;gap:10px">
++                  <img src="${r.image_url || 'assets/images/default_product.png'}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border)" />
++                  <div>
++                    <strong>${r.product_name}</strong>
++                    <div style="font-size:0.7rem;color:var(--text-muted)">Category: ${r.product_category || 'Other'}</div>
++                  </div>
++                </div>
++              </td>
++              <td><a href="${r.product_url}" target="_blank" class="badge badge-muted" style="text-decoration:none;color:var(--primary);font-weight:700">≡ƒîÉ Visit URL Γåù</a></td>
++              <td><span class="badge platform-${r.platform}">${icon} ${r.platform.toUpperCase()}</span></td>
++              <td><strong class="badge badge-accent">${discountHtml}</strong></td>
++              <td>${statusHtml}</td>
++              <td>${actionsHtml}</td>
++            </tr>
++          `;
++        });
++      }
++
++      if (_dtRequests) { _dtRequests.destroy(); _dtRequests = null; }
++      $('#tbl-incoming-requests-body').html(rows);
++      if (data.length > 0) {
++        _dtRequests = $('#tbl-incoming-requests').DataTable({
++          pageLength: 10,
++          retrieve: true,
++          order: [[0, 'asc']]
++        });
++      }
++    }).fail(App.api.handleError);
++  }
++
++  // Bind tab links click
++  $(document).off('click', '.tab-link').on('click', '.tab-link', function (e) {
++    e.preventDefault();
++    $('.tab-link').removeClass('active').css({ 'color': 'var(--text-muted)', 'font-weight': '600', 'border-bottom': 'none' });
++    $(this).addClass('active').css({ 'color': 'var(--primary)', 'font-weight': '700', 'border-bottom': '2px solid var(--primary)' });
++    
++    var target = $(this).data('target');
++    if (target === 'campaigns') {
++      $('#panel-active-campaigns').show();
++      $('#panel-incoming-requests').hide();
++      loadCampaigns();
++    } else {
++      $('#panel-active-campaigns').hide();
++      $('#panel-incoming-requests').show();
++      loadIncomingRequests();
++    }
++  });
++
+   $(document).on('change', '.toggle-camp-status', function () {
+     var $chk = $(this);
+     var id = $chk.data('id');
+@@ -317,6 +457,68 @@ App.Influencer.Campaigns = (function ($) {
+     navigator.clipboard.writeText(link).then(function(){ Swal.fire({icon:'success',title:'Link Copied!',showConfirmButton:false,timer:1200}); }).catch(function(){ prompt('Copy link:', link); });
+   });
+ 
++  // Approve request
++  $(document).off('click', '.btn-approve-request').on('click', '.btn-approve-request', function (e) {
++    e.preventDefault();
++    var reqId = parseInt($(this).data('id'));
++    
++    Swal.fire({
++      title: 'Approve Request?',
++      text: 'This will automatically generate a tracking campaign link for this product on your specified platform.',
++      icon: 'question',
++      showCancelButton: true,
++      confirmButtonText: 'Yes, Approve',
++      confirmButtonColor: '#22C55E',
++      cancelButtonText: 'Cancel'
++    }).then(function (result) {
++      if (result.isConfirmed) {
++        Swal.fire({
++          title: 'Generating campaign...',
++          allowOutsideClick: false,
++          didOpen: () => { Swal.showLoading(); }
++        });
++        App.api.campaigns.respondRequest({ id: reqId, status: 'approved' })
++          .done(function (res) {
++            Swal.fire({ icon: 'success', title: 'Approved!', text: 'Campaign generated successfully. Copy the link from your campaign list!', confirmButtonColor: '#6C63FF' });
++            loadRequestsCount();
++            loadIncomingRequests();
++          })
++          .fail(App.api.handleError);
++      }
++    });
++  });
++
++  // Decline request
++  $(document).off('click', '.btn-decline-request').on('click', '.btn-decline-request', function (e) {
++    e.preventDefault();
++    var reqId = parseInt($(this).data('id'));
++    
++    Swal.fire({
++      title: 'Decline Request?',
++      text: 'Are you sure you want to decline this campaign invitation? The client will see that the request has been declined.',
++      icon: 'warning',
++      showCancelButton: true,
++      confirmButtonText: 'Yes, Decline',
++      confirmButtonColor: '#EF4444',
++      cancelButtonText: 'Cancel'
++    }).then(function (result) {
++      if (result.isConfirmed) {
++        Swal.fire({
++          title: 'Processing...',
++          allowOutsideClick: false,
++          didOpen: () => { Swal.showLoading(); }
++        });
++        App.api.campaigns.respondRequest({ id: reqId, status: 'declined' })
++          .done(function (res) {
++            Swal.fire({ icon: 'success', title: 'Declined', text: 'The request has been declined.', confirmButtonColor: '#6C63FF' });
++            loadRequestsCount();
++            loadIncomingRequests();
++          })
++          .fail(App.api.handleError);
++      }
++    });
++  });
++
+   return { init };
+ }(jQuery));
+ 
+diff --git a/setup.php b/setup.php
+index 7e35a7f..035b7d9 100644
+--- a/setup.php
++++ b/setup.php
+@@ -105,6 +105,24 @@ CREATE TABLE IF NOT EXISTS `campaigns` (
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ", "Table: campaigns", $log, $errors);
+ 
++run($db, "
++CREATE TABLE IF NOT EXISTS `campaign_requests` (
++  `id`              INT AUTO_INCREMENT PRIMARY KEY,
++  `client_id`       INT NOT NULL,
++  `influencer_id`   INT NOT NULL,
++  `product_id`      INT NOT NULL,
++  `platform`        VARCHAR(50) NOT NULL,
++  `discount_type`   ENUM('percent','fixed') DEFAULT 'percent',
++  `discount_value`  DECIMAL(10,2) DEFAULT 0.00,
++  `status`          ENUM('pending','approved','declined') DEFAULT 'pending',
++  `created_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
++  `updated_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
++  FOREIGN KEY (`client_id`)     REFERENCES `users`(`id`) ON DELETE CASCADE,
++  FOREIGN KEY (`influencer_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
++  FOREIGN KEY (`product_id`)    REFERENCES `products`(`id`) ON DELETE CASCADE
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++", "Table: campaign_requests", $log, $errors);
++
+ // Run migration for existing campaigns table if it was already created without platform
+ try {
+     $cols = $db->query("DESCRIBE `campaigns`")->fetchAll(PDO::FETCH_COLUMN);

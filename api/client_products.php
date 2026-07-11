@@ -289,6 +289,7 @@ if ($action === 'influencers') {
         SELECT u.id, u.name, u.avatar,
                COALESCE(u.follower_count, 0) as primary_followers,
                (SELECT COALESCE(SUM(follower_count), 0) FROM user_platforms WHERE user_id = u.id) as platform_followers,
+               (SELECT GROUP_CONCAT(platform SEPARATOR ',') FROM user_platforms WHERE user_id = u.id) as platforms_list,
                GROUP_CONCAT(DISTINCT ic.name SEPARATOR ',') as categories
         FROM users u
         LEFT JOIN user_categories uc ON uc.user_id = u.id
@@ -307,7 +308,8 @@ if ($action === 'influencers') {
                 'name' => $inf['name'],
                 'avatar' => $inf['avatar'],
                 'followers' => max((int)$inf['primary_followers'], (int)$inf['platform_followers']),
-                'categories' => $inf['categories'] ? explode(',', $inf['categories']) : []
+                'categories' => $inf['categories'] ? explode(',', $inf['categories']) : [],
+                'platforms' => $inf['platforms_list'] ? explode(',', $inf['platforms_list']) : []
             ];
         }, $influencers)
     ]);
