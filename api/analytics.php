@@ -350,17 +350,28 @@ if ($action === 'insights') {
     $campStmt->execute($campParams);
     $runningCampaigns = (int)$campStmt->fetchColumn();
 
-    // 5. Query Active Clients with Positive Wallet Balance (with client filter if selected)
-    $clientWhere = ["role = 'client'", "status = 'active'", "wallet_balance > 0"];
+    // 5. Query Active Clients with Positive Wallet Balance & details
+    $clientWhere = ["role = 'client'", "status = 'active'"];
     $clientParams = [];
     if ($clientId > 0) {
         $clientWhere[] = "id = ?";
         $clientParams[] = $clientId;
     }
     $clientWhereStr = implode(' AND ', $clientWhere);
-    $clientStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE $clientWhereStr");
-    $clientStmt->execute($clientParams);
-    $clientsWithBalance = (int)$clientStmt->fetchColumn();
+    
+    $clientsWithBalance = (int)$db->query("SELECT COUNT(*) FROM users WHERE role = 'client' AND status = 'active' AND wallet_balance > 0")->fetchColumn();
+
+    $clientsStmt = $db->prepare("
+        SELECT id, name, company_category, wallet_balance 
+        FROM users 
+        WHERE $clientWhereStr
+        ORDER BY wallet_balance DESC
+    ");
+    $clientsStmt->execute($clientParams);
+    $clientsSummary = $clientsStmt->fetchAll();
+    foreach ($clientsSummary as &$cl) {
+        $cl['wallet_balance'] = round((float)$cl['wallet_balance'], 3);
+    }
 
     apiSuccess([
         'stats' => [
@@ -373,6 +384,7 @@ if ($action === 'insights') {
             'conversions_count' => $conversionsCount
         ],
         'influencers_summary' => array_values($infStats),
+        'clients_summary' => $clientsSummary,
         'transactions' => $txs
     ]);
 }

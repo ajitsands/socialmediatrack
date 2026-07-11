@@ -8,6 +8,8 @@ App.Admin.Insights = (function ($) {
   'use strict';
 
   var _dtTx = null;
+  var _dtInfluencers = null;
+  var _dtClients = null;
 
   var eventTypeLabels = {
     click: '👆 Click',
@@ -17,6 +19,8 @@ App.Admin.Insights = (function ($) {
   function init() {
     if (!App.auth.requireAuth('admin')) return;
     _dtTx = null;
+    _dtInfluencers = null;
+    _dtClients = null;
     render();
 
     // Default date range: current month (1st of month to today)
@@ -116,28 +120,56 @@ App.Admin.Insights = (function ($) {
       <!-- Detail tables grid -->
       <div class="grid-2" style="display:grid; grid-template-columns:1fr 2.2fr; gap:24px; margin-bottom:24px">
         
-        <!-- Left: Influencers Earnings summary -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">⭐ Accumulated Influencer Payouts</span>
-          </div>
-          <div class="card-body" style="padding:0">
-            <div class="table-wrapper" style="padding:16px">
-              <table id="tbl-insights-influencers" class="dataTable" style="width:100%; font-size:0.85rem">
-                <thead>
-                  <tr>
-                    <th>Influencer</th>
-                    <th>Clicks</th>
-                    <th>Leads</th>
-                    <th>Earnings</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">No summary data.</td></tr>
-                </tbody>
-              </table>
+        <!-- Left: Influencers Earnings summary + Client Balances -->
+        <div style="display:flex; flex-direction:column; gap:24px">
+          
+          <!-- Influencers Payouts table -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">⭐ Accumulated Influencer Payouts</span>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="table-wrapper" style="padding:16px">
+                <table id="tbl-insights-influencers" class="dataTable" style="width:100%; font-size:0.85rem">
+                  <thead>
+                    <tr>
+                      <th>Influencer</th>
+                      <th>Clicks</th>
+                      <th>Leads</th>
+                      <th>Earnings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">Loading influencer payouts...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+
+          <!-- Client Balances table -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🏢 Client Wallet Balances</span>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="table-wrapper" style="padding:16px">
+                <table id="tbl-insights-clients" class="dataTable" style="width:100%; font-size:0.85rem">
+                  <thead>
+                    <tr>
+                      <th>Vendor (Client)</th>
+                      <th>Company</th>
+                      <th>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="3" style="text-align:center;padding:16px;color:var(--text-muted)">Loading client balances...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Right: Transaction statement list -->
@@ -199,6 +231,8 @@ App.Admin.Insights = (function ($) {
     var influencerId = $('#insights-filter-influencer').val();
 
     if (_dtTx) { _dtTx.destroy(); _dtTx = null; }
+    if (_dtInfluencers) { _dtInfluencers.destroy(); _dtInfluencers = null; }
+    if (_dtClients) { _dtClients.destroy(); _dtClients = null; }
 
     App.api.analytics.insights(dateFrom, dateTo, clientId, influencerId)
       .done(function(res){
@@ -215,25 +249,37 @@ App.Admin.Insights = (function ($) {
         var profitColor = profitVal >= 0 ? '#22C55E' : '#EF4444';
         $('#kpi-admin-profit').text(profitVal.toFixed(3) + ' BHD').css('color', profitColor);
 
-        // Populate influencer summary list
-        var infTableBody = $('#tbl-insights-influencers tbody');
-        infTableBody.empty();
-        if (d.influencers_summary.length === 0) {
-          infTableBody.append('<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">No payout logs matching filters</td></tr>');
-        } else {
-          d.influencers_summary.forEach(function(r){
-            infTableBody.append(`
-              <tr>
-                <td><strong>${r.name}</strong></td>
-                <td><span style="color:var(--info)">${r.clicks}</span></td>
-                <td><strong style="color:var(--success)">${r.conversions}</strong></td>
-                <td><strong style="color:var(--accent)">${parseFloat(r.earnings).toFixed(3)} BHD</strong></td>
-              </tr>
-            `);
-          });
-        }
+        // 1. Initialize Influencers Payouts DataTable
+        _dtInfluencers = $('#tbl-insights-influencers').DataTable({
+          data: d.influencers_summary,
+          pageLength: 5,
+          order: [[3, 'desc']],
+          columns: [
+            { data: 'name', render: function(d){ return `<strong>${d}</strong>`; } },
+            { data: 'clicks', render: function(d){ return `<span style="color:var(--info);font-weight:600">${d}</span>`; } },
+            { data: 'conversions', render: function(d){ return `<strong style="color:var(--success)">${d}</strong>`; } },
+            { data: 'earnings', render: function(d){ return `<strong style="color:var(--accent)">${parseFloat(d).toFixed(3)} BHD</strong>`; } }
+          ]
+        });
 
-        // Initialize DataTable
+        // 2. Initialize Client Balances DataTable
+        _dtClients = $('#tbl-insights-clients').DataTable({
+          data: d.clients_summary,
+          pageLength: 5,
+          order: [[2, 'desc']],
+          columns: [
+            { data: 'name', render: function(d){ return `<strong>${d}</strong>`; } },
+            { data: 'company_category', render: function(d){ return d ? `<span class="badge" style="background:var(--badge-bg);color:var(--text-secondary)">${d}</span>` : '—'; } },
+            { data: 'wallet_balance', render: function(d){
+                var val = parseFloat(d);
+                var color = val >= 0.100 ? '#22C55E' : '#EF4444';
+                return `<strong style="color:${color}">${val.toFixed(3)} BHD</strong>`;
+              } 
+            }
+          ]
+        });
+
+        // 3. Initialize Transactions DataTable
         _dtTx = $('#tbl-insights-transactions').DataTable({
           data: d.transactions,
           pageLength: 15,
