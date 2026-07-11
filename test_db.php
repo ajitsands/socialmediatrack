@@ -1,25 +1,16 @@
 <?php
-require_once __DIR__ . '/config/database.php';
 header('Content-Type: text/plain');
 
-try {
-    $db = getDB();
-    echo "Connected successfully to database.\n\n";
-    
-    echo "TABLES IN DATABASE:\n";
-    $stmt = $db->query("SHOW TABLES");
-    $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($tables as $t) {
-        echo " - $t\n";
+$setupFile = __DIR__ . '/setup.php';
+echo "SETUP FILE PATH: $setupFile\n";
+echo "SETUP FILE EXISTS: " . (file_exists($setupFile) ? 'YES' : 'NO') . "\n";
+echo "SETUP FILE SIZE: " . filesize($setupFile) . " bytes\n";
+echo "SETUP FILE MD5: " . md5_file($setupFile) . "\n\n";
+
+if (file_exists($setupFile)) {
+    $lines = file($setupFile);
+    echo "LINES 100 - 130 in setup.php:\n";
+    for ($i = 99; $i < min(135, count($lines)); $i++) {
+        echo ($i + 1) . ": " . $lines[$i];
     }
-    
-    if (in_array('campaign_requests', $tables)) {
-        echo "\nTable 'campaign_requests' exists. Structure:\n";
-        $desc = $db->query("DESCRIBE campaign_requests")->fetchAll();
-        print_r($desc);
-    } else {
-        echo "\nTable 'campaign_requests' does NOT exist.\n";
-    }
-} catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
 }
