@@ -130,7 +130,7 @@ if ($action === 'list') {
     $stmt = $db->prepare("
         SELECT p.id, p.name, p.category, p.description, p.price, p.cpc_rate, p.cpl_rate, p.currency, p.image_url, p.image_url_1, p.image_url_2, p.image_url_3, p.video_url, p.display_platform, p.status, p.created_at,
                COUNT(DISTINCT c.id) as campaign_count,
-               COUNT(DISTINCT e.id) as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
         FROM products p
         LEFT JOIN campaigns c ON c.product_id = p.id

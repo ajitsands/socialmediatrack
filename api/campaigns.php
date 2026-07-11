@@ -33,7 +33,7 @@ if ($action === 'list') {
                p.cpc_rate, p.cpl_rate,
                u.name as influencer_name, u.social_handle,
                IFNULL(c.platform, u.platform) as platform,
-               COUNT(DISTINCT e.id) as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions,
                COUNT(DISTINCT CASE WHEN e.type='skip' THEN e.id END) as total_skips
         FROM campaigns c
@@ -324,7 +324,7 @@ if ($action === 'list_requests') {
             SELECT cr.*, p.name as product_name, p.category as product_category, p.product_url, p.image_url,
                    p.cpc_rate, p.cpl_rate,
                    c.name as client_name, c.email as client_email,
-                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id
@@ -345,7 +345,7 @@ if ($action === 'list_requests') {
             SELECT cr.*, p.name as product_name, p.image_url,
                    p.cpc_rate, p.cpl_rate,
                    i.name as influencer_name, i.social_handle,
-                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id
@@ -366,7 +366,7 @@ if ($action === 'list_requests') {
             SELECT cr.*, p.name as product_name, p.image_url,
                    p.cpc_rate, p.cpl_rate,
                    i.name as influencer_name, c.name as client_name,
-                   COUNT(DISTINCT e.id) as total_clicks,
+                   COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                    COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
             FROM campaign_requests cr
             JOIN products p ON p.id = cr.product_id

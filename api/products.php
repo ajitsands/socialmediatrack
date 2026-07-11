@@ -13,7 +13,7 @@ if ($action === 'list') {
         SELECT p.id, p.client_id, p.name, p.category, p.description, p.price, p.cpc_rate, p.cpl_rate, p.currency, p.image_url, p.product_url, p.demo_url, p.status, p.created_at, p.updated_at,
                u.name as client_name,
                COUNT(DISTINCT c.id) as campaign_count,
-               COUNT(DISTINCT e.id) as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END) as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END) as total_conversions
         FROM products p
         LEFT JOIN users u ON u.id = p.client_id

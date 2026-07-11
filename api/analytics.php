@@ -53,7 +53,7 @@ if ($action === 'by_campaign') {
         SELECT c.id, c.offer_code, c.status,
                p.name as product_name, p.category,
                u.name as influencer_name, u.social_handle, u.platform,
-               COUNT(DISTINCT e.id)                                         as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END)        as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END)  as total_conversions,
                COUNT(DISTINCT CASE WHEN e.type='skip'       THEN e.id END)  as total_skips,
                c.created_at
@@ -73,7 +73,7 @@ if ($action === 'by_influencer') {
     $stmt = $db->query("
         SELECT u.id, u.name, u.social_handle, u.platform,
                COUNT(DISTINCT c.id)                                         as campaigns,
-               COUNT(DISTINCT e.id)                                         as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END)        as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END)  as total_conversions,
                COUNT(DISTINCT CASE WHEN e.type='skip'       THEN e.id END)  as total_skips
         FROM users u
@@ -92,7 +92,7 @@ if ($action === 'by_product') {
     $stmt = $db->query("
         SELECT p.id, p.name, p.category, p.price, p.currency,
                COUNT(DISTINCT c.id)                                         as campaigns,
-               COUNT(DISTINCT e.id)                                         as total_clicks,
+               COUNT(DISTINCT CASE WHEN e.type='click' THEN e.id END)        as total_clicks,
                COUNT(DISTINCT CASE WHEN e.type='conversion' THEN e.id END)  as total_conversions
         FROM products p
         LEFT JOIN campaigns c ON c.product_id  = p.id
