@@ -50,6 +50,11 @@ if ($action === 'me') {
     $platStmt->execute([$_SESSION['user_id']]);
     $user['platforms'] = $platStmt->fetchAll();
 
+    // Attach selected category IDs
+    $catStmt = $db->prepare("SELECT category_id FROM user_categories WHERE user_id = ?");
+    $catStmt->execute([$_SESSION['user_id']]);
+    $user['category_ids'] = array_column($catStmt->fetchAll(), 'category_id');
+
     apiSuccess($user);
 }
 
@@ -183,6 +188,35 @@ if ($action === 'save_platforms') {
     $platStmt = $db->prepare("SELECT platform, social_handle as handle, follower_count as followers FROM user_platforms WHERE user_id = ? ORDER BY id ASC");
     $platStmt->execute([$userId]);
     apiSuccess($platStmt->fetchAll(), 'Social media accounts saved successfully');
+}
+
+// ─── Get Categories (influencer self-service) ───
+if ($action === 'get_categories') {
+    requireAuth();
+    $db   = getDB();
+    $stmt = $db->query("SELECT id, name FROM influencer_categories ORDER BY name ASC");
+    apiSuccess($stmt->fetchAll());
+}
+
+// ─── Save Categories (influencer self-service) ───
+if ($action === 'save_categories') {
+    requireAuth();
+    $input  = getInput();
+    $userId = $_SESSION['user_id'];
+    $ids    = $input['category_ids'] ?? [];
+
+    $db = getDB();
+    // Delete and re-insert
+    $db->prepare("DELETE FROM user_categories WHERE user_id = ?")->execute([$userId]);
+
+    if (!empty($ids)) {
+        $ins = $db->prepare("INSERT INTO user_categories (user_id, category_id) VALUES (?, ?)");
+        foreach ($ids as $cid) {
+            $cid = (int)$cid;
+            if ($cid > 0) $ins->execute([$userId, $cid]);
+        }
+    }
+    apiSuccess([], 'Categories saved successfully');
 }
 
 apiError('Invalid action');

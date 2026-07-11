@@ -9,11 +9,14 @@ App.Influencer.Profile = (function ($) {
 
   var _cropper = null;
   var _croppedImageBase64 = null;
+  var _categories = [];
 
   function init() {
     if (!App.auth.requireAuth('influencer')) return;
     renderLayout();
-    loadProfileDetails();
+    loadCategories().done(function() {
+      loadProfileDetails();
+    });
     bindEvents();
   }
 
@@ -188,6 +191,22 @@ App.Influencer.Profile = (function ($) {
         </div>
       </div>
 
+      <!-- Categories / Niches Card (full width) -->
+      <div class="card" style="margin-top:24px">
+        <div class="card-header">
+          <span class="card-title">🏷️ My Categories / Niches</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px 0">Select all the categories that best describe your content. This helps clients in the right niche discover you.</p>
+          <div id="profile-categories-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--table-stripe);margin-bottom:20px;min-height:60px">
+            <span style="color:var(--text-muted);font-size:0.85rem">Loading categories…</span>
+          </div>
+          <button class="btn btn-primary" id="btn-save-categories" style="font-weight:600">
+            💾 Save Categories
+          </button>
+        </div>
+      </div>
+
       <!-- Image Cropping Modal Backdrop -->
       <div class="modal-backdrop" id="modal-avatar-crop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center">
         <div class="card" style="width:100%; max-width:550px; margin:20px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.3)">
@@ -236,6 +255,10 @@ App.Influencer.Profile = (function ($) {
           });
         }
 
+        // Tick saved category checkboxes
+        var savedIds = (user.category_ids || []).map(function(id){ return parseInt(id); });
+        renderCategoryCheckboxes(savedIds);
+
         if (parseInt(user.profile_locked) === 1) {
           $('#profile-name').prop('disabled', true).css({
             'background': 'var(--border-light)',
@@ -251,6 +274,30 @@ App.Influencer.Profile = (function ($) {
         }
       })
       .fail(App.api.handleError);
+  }
+
+  function loadCategories() {
+    return App.api.auth.getCategories().done(function(res) {
+      _categories = res.data || [];
+    });
+  }
+
+  function renderCategoryCheckboxes(selectedIds) {
+    selectedIds = selectedIds || [];
+    var $con = $('#profile-categories-container');
+    if (_categories.length === 0) {
+      $con.html('<span style="color:var(--text-muted);font-size:0.85rem">No categories defined yet. Ask your admin to create some.</span>');
+      return;
+    }
+    var html = _categories.map(function(cat) {
+      var checked = selectedIds.indexOf(parseInt(cat.id)) !== -1 ? 'checked' : '';
+      return `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;user-select:none;padding:6px 8px;border-radius:8px;transition:background 0.15s" class="cat-label">
+          <input type="checkbox" class="prof-cat-cb" value="${cat.id}" ${checked} style="width:17px;height:17px;accent-color:var(--primary);cursor:pointer">
+          <span>${cat.name}</span>
+        </label>`;
+    }).join('');
+    $con.html(html);
   }
 
   function addProfilePlatformRow(plat, handle, followers) {
@@ -415,6 +462,24 @@ App.Influencer.Profile = (function ($) {
         })
         .fail(function(err) {
           $btn.prop('disabled', false).html('💾 Save Social Media Accounts');
+          App.api.handleError(err);
+        });
+    });
+
+    // Save Categories
+    $(document).off('click', '#btn-save-categories').on('click', '#btn-save-categories', function() {
+      var ids = [];
+      $('.prof-cat-cb:checked').each(function() {
+        ids.push(parseInt($(this).val()));
+      });
+      var $btn = $(this).prop('disabled', true).text('Saving…');
+      App.api.auth.saveCategories(ids)
+        .done(function() {
+          $btn.prop('disabled', false).html('💾 Save Categories');
+          Swal.fire({ icon: 'success', title: 'Categories Updated! 🏷️', text: 'Your niche selections have been saved.', timer: 2000, showConfirmButton: false });
+        })
+        .fail(function(err) {
+          $btn.prop('disabled', false).html('💾 Save Categories');
           App.api.handleError(err);
         });
     });

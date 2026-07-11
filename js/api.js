@@ -90,7 +90,9 @@ App.api = (function ($) {
     me:     function ()  { return _request('auth', 'me',     {}, 'GET'); },
     updateProfile: function (d) { return _request('auth', 'update_profile', d, 'POST'); },
     changePassword: function (d) { return _request('auth', 'change_password', d, 'POST'); },
-    savePlatforms: function (platforms) { return _request('auth', 'save_platforms', { platforms: platforms }, 'POST'); },
+    savePlatforms:   function (platforms)    { return _request('auth', 'save_platforms',   { platforms: platforms },       'POST'); },
+    getCategories:   function ()             { return _request('auth', 'get_categories',   {},                            'GET');  },
+    saveCategories:  function (category_ids) { return _request('auth', 'save_categories',  { category_ids: category_ids }, 'POST'); },
   };
 
   /* ── Users / Influencers ─────────────────── */
