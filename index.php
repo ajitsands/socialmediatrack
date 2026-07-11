@@ -165,7 +165,7 @@ header("Pragma: no-cache");
 <!-- Admin modules -->
 <script src="js/admin/dashboard.js?v=1.2.6"></script>
 <script src="js/admin/influencers.js?v=1.2.6"></script>
-<script src="js/admin/clients.js?v=1.2.6"></script>
+<script src="js/admin/clients.js?v=1.2.7"></script>
 <script src="js/admin/products.js?v=1.2.6"></script>
 <script src="js/admin/campaigns.js?v=1.2.6"></script>
 <script src="js/admin/analytics.js?v=1.2.6"></script>
@@ -179,7 +179,7 @@ header("Pragma: no-cache");
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.2.6"></script>
-<script src="js/client/products.js?v=1.2.6"></script>
+<script src="js/client/products.js?v=1.2.7"></script>
 <script src="js/client/crm.js?v=1.2.6"></script>
 <script src="js/client/wallet.js?v=1.2.6"></script>
 
