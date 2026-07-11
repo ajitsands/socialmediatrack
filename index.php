@@ -182,7 +182,7 @@ header("Pragma: no-cache");
 <script src="js/client/products.js?v=1.3.1"></script>
 <script src="js/client/crm.js?v=1.2.6"></script>
 <script src="js/client/wallet.js?v=1.2.6"></script>
-<script src="js/client/influencers.js?v=1.0.0"></script>
+<script src="js/client/influencers.js?v=1.3.0"></script>
 
 <!-- Router (boot last) -->
 <script src="js/app.js?v=1.2.7"></script>

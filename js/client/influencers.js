@@ -15,6 +15,14 @@ App.Client.Influencers = (function ($) {
     loadInfluencersData();
   }
 
+  // Format follower count → 1.2K / 170K / 1.5M
+  function fmtFollowers(n) {
+    n = parseInt(n) || 0;
+    if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+    if (n >= 1000)    return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
+    return n.toString();
+  }
+
   function renderLayout() {
     $('#page-content').html(`
       <style>
@@ -268,7 +276,7 @@ App.Client.Influencers = (function ($) {
         ${avatarHtml}
         <h4 class="influencer-name">${inf.name}</h4>
         <div class="influencer-followers">
-          👥 <span>${inf.followers.toLocaleString()}</span>
+          👥 <span>${fmtFollowers(inf.followers)} followers</span>
         </div>
         <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center">
           ${badgesHtml}
