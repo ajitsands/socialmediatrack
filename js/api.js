@@ -177,6 +177,7 @@ App.api = (function ($) {
     updateConfig:      function (d) { return _request('points', 'update_config', d, 'POST'); },
     influencerPoints:  function ()  { return _request('points', 'influencer_points', {}, 'GET'); },
     myPoints:          function ()  { return _request('points', 'my_points', {}, 'GET'); },
+    clientRates:       function ()  { return _request('points', 'client_rates', {}, 'GET'); },
   };
 
   /* ── Wallet ──────────────────────────────── */

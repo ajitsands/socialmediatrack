@@ -14,11 +14,27 @@ App.Client.Products = (function ($) {
   var _imagesBase64 = [null, null, null];
   var _videoFile = null;
 
+  var _adminCpcRate = 0;
+  var _adminCplRate = 0;
+
   function init() {
     render();
     loadCategories();
+    loadAdminRates();
     loadTable();
     bindEvents();
+  }
+
+  function loadAdminRates() {
+    App.api.points.clientRates()
+      .done(function (res) {
+        var d = res.data || {};
+        _adminCpcRate = parseFloat(d.cpc_rate || 0);
+        _adminCplRate = parseFloat(d.cpl_rate || 0);
+        var cur = d.currency || 'BHD';
+        $('#prod-cpc-display').text(_adminCpcRate.toFixed(3) + ' ' + cur + ' per click');
+        $('#prod-cpl-display').text(_adminCplRate.toFixed(3) + ' ' + cur + ' per lead');
+      });
   }
 
   function loadCategories() {
@@ -96,9 +112,11 @@ App.Client.Products = (function ($) {
                 <textarea class="form-control" id="prod-desc" rows="3" placeholder="Describe your product..."></textarea>
               </div>
 
-              <div class="grid-3" style="display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:12px; margin-bottom:16px">
+
+              <!-- Price Row -->
+              <div class="grid-2" style="display:grid; grid-template-columns:1.2fr 1fr; gap:12px; margin-bottom:16px">
                 <div class="form-group">
-                  <label class="form-label">Price <span class="req">*</span></label>
+                  <label class="form-label">Product Price <span class="req">*</span></label>
                   <div style="display:flex; gap:6px">
                     <select class="form-control" id="prod-currency" style="max-width:80px; padding:4px">
                       <option value="BHD">BHD</option>
@@ -110,13 +128,28 @@ App.Client.Products = (function ($) {
                     <input type="number" step="0.001" min="0" class="form-control" id="prod-price" required placeholder="0.000" />
                   </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">CPC Offer (BHD) <span class="req">*</span></label>
-                  <input type="number" step="0.001" min="0.001" class="form-control" id="prod-cpc" required value="0.020" />
+              </div>
+
+              <!-- CPC / CPL — Admin-Controlled, Read-Only -->
+
+              <div style="background:rgba(108,99,255,0.06); border:1px solid rgba(108,99,255,0.2); border-radius:10px; padding:14px 16px; margin-bottom:16px">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px">
+                  <span style="font-size:1rem">⚙️</span>
+                  <strong style="color:var(--primary); font-size:0.9rem">Campaign Offer Rates — Set by Admin</strong>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">CPL Offer (BHD) <span class="req">*</span></label>
-                  <input type="number" step="0.001" min="0.005" class="form-control" id="prod-cpl" required value="0.200" />
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px">
+                  <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px">💰 CPC Offer (per click)</div>
+                    <div id="prod-cpc-display" style="font-size:1.1rem; font-weight:700; color:var(--primary); background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:8px 12px">Loading...</div>
+                  </div>
+                  <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px">🎯 CPL Offer (per lead)</div>
+                    <div id="prod-cpl-display" style="font-size:1.1rem; font-weight:700; color:#22C55E; background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:8px 12px">Loading...</div>
+                  </div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:flex-start; gap:6px; border-top:1px solid var(--border); padding-top:8px">
+                  <span style="flex-shrink:0">⚠️</span>
+                  <span>These rates are configured by the admin based on the platform's points system. <strong>Prices may vary based on market conditions.</strong> Contact your account manager for custom rates.</span>
                 </div>
               </div>
 

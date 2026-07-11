@@ -21,8 +21,24 @@ App.Admin.Products = (function ($) {
     render();
     loadCategories();
     loadClients();
+    loadPointsConfig();
     loadTable();
     bindEvents();
+  }
+
+  var _pointsCfg = null;
+
+  function loadPointsConfig() {
+    App.api.points.config().done(function (res) {
+      _pointsCfg = res.data || {};
+      var dfltCpc = parseFloat(_pointsCfg.click_value_per_point || 0).toFixed(3);
+      var dfltCpl = parseFloat(_pointsCfg.vendor_conversion_value_per_point || 0).toFixed(3);
+      var cur = _pointsCfg.currency || 'BHD';
+      $('#prod-cpc-rate').attr('placeholder', 'Default: ' + dfltCpc + ' ' + cur);
+      $('#prod-cpl-rate').attr('placeholder', 'Default: ' + dfltCpl + ' ' + cur);
+      $('#lbl-cpc-hint').text('(System default: ' + dfltCpc + ' ' + cur + ')');
+      $('#lbl-cpl-hint').text('(System default: ' + dfltCpl + ' ' + cur + ')');
+    });
   }
 
   function loadCategories() {
@@ -131,13 +147,15 @@ App.Admin.Products = (function ($) {
                       <input type="number" class="form-control" id="prod-price" placeholder="0.000" min="0" step="0.001" style="flex:1">
                     </div>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">CPC Rate (BHD) <span class="req">*</span></label>
-                    <input type="number" class="form-control" id="prod-cpc-rate" placeholder="0.000" min="0" step="0.001" required>
+                 <div class="form-group">
+                    <label class="form-label">CPC Rate (BHD) <span style="font-size:0.75rem; color:#6C63FF; font-weight:600" id="lbl-cpc-hint"></span></label>
+                    <input type="number" class="form-control" id="prod-cpc-rate" placeholder="0 = use system default" min="0" step="0.001">
+                    <p class="form-helper" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">Set 0 to use the platform-wide default from Points Config</p>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">CPL Rate (BHD) <span class="req">*</span></label>
-                    <input type="number" class="form-control" id="prod-cpl-rate" placeholder="0.000" min="0" step="0.001" required>
+                    <label class="form-label">CPL Rate (BHD) <span style="font-size:0.75rem; color:#22C55E; font-weight:600" id="lbl-cpl-hint"></span></label>
+                    <input type="number" class="form-control" id="prod-cpl-rate" placeholder="0 = use system default" min="0" step="0.001">
+                    <p class="form-helper" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">Set 0 to use the platform-wide default from Points Config</p>
                   </div>
                 </div>
                 <div class="form-group">
@@ -181,8 +199,20 @@ App.Admin.Products = (function ($) {
                 ? `<div style="font-size:0.72rem;color:#6C63FF;font-weight:500">🏢 ${r.client_name}</div>` 
                 : `<div style="font-size:0.72rem;color:var(--text-muted)">Internal</div>`;
 
-              var ratesLabel = `<div style="font-size:0.72rem;color:var(--text-muted)">CPC: <strong>${parseFloat(r.cpc_rate).toFixed(3)}</strong> | CPL: <strong>${parseFloat(r.cpl_rate).toFixed(3)}</strong></div>`;
-
+              var ratesLabel = (function() {
+                var cfg = _pointsCfg || {};
+                var dfltCpc = parseFloat(cfg.click_value_per_point || 0);
+                var dfltCpl = parseFloat(cfg.vendor_conversion_value_per_point || 0);
+                var effCpc = parseFloat(r.cpc_rate) > 0 ? parseFloat(r.cpc_rate) : dfltCpc;
+                var effCpl = parseFloat(r.cpl_rate) > 0 ? parseFloat(r.cpl_rate) : dfltCpl;
+                var cpcLabel = parseFloat(r.cpc_rate) > 0
+                  ? '<strong>' + effCpc.toFixed(3) + '</strong>'
+                  : '<strong>' + effCpc.toFixed(3) + '</strong> <span style="color:#6C63FF;font-size:0.65rem">(⚡default)</span>';
+                var cplLabel = parseFloat(r.cpl_rate) > 0
+                  ? '<strong>' + effCpl.toFixed(3) + '</strong>'
+                  : '<strong>' + effCpl.toFixed(3) + '</strong> <span style="color:#22C55E;font-size:0.65rem">(⚡default)</span>';
+                return '<div style="font-size:0.72rem;color:var(--text-muted)">CPC: ' + cpcLabel + ' | CPL: ' + cplLabel + '</div>';
+              })();
               return `<div style="display:flex;align-items:center;gap:10px">
                 <div style="width:38px;height:38px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${icon}</div>
                 <div>

@@ -93,6 +93,18 @@ function saveVideoFile($fileField, $subDir = 'uploads/products/videos/') {
     return $subDir . $filename;
 }
 
+// Helper: Get effective CPC/CPL for this product.
+// If admin has set a non-zero product-level rate, use it; otherwise use points_config.
+function getEffectiveRates($db, $prodCpc = 0, $prodCpl = 0) {
+    $cfg    = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
+    $cfgCpc = $cfg ? (float)$cfg['click_value_per_point']             : 0.001;
+    $cfgCpl = $cfg ? (float)$cfg['vendor_conversion_value_per_point'] : 0.020;
+    return [
+        'cpc_rate' => ((float)$prodCpc > 0) ? (float)$prodCpc : $cfgCpc,
+        'cpl_rate' => ((float)$prodCpl > 0) ? (float)$prodCpl : $cfgCpl,
+    ];
+}
+
 // ─── List Products ────────────────────────────
 if ($action === 'list') {
     $stmt = $db->prepare("
@@ -123,21 +135,23 @@ if ($action === 'get') {
 
 // ─── Create Product ───────────────────────────
 if ($action === 'create') {
-    $name = sanitize($input['name'] ?? '');
-    $cat = sanitize($input['category'] ?? 'Other');
-    $desc = sanitize($input['description'] ?? '');
-    $price = (float)($input['price'] ?? 0);
-    $cpcRate = (float)($input['cpc_rate'] ?? 0.020);
-    $cplRate = (float)($input['cpl_rate'] ?? 0.200);
-    $curr = sanitize($input['currency'] ?? 'BHD');
-    $pUrl = trim($input['product_url'] ?? '');
-    $dUrl = trim($input['demo_url'] ?? '');
+    $name     = sanitize($input['name'] ?? '');
+    $cat      = sanitize($input['category'] ?? 'Other');
+    $desc     = sanitize($input['description'] ?? '');
+    $price    = (float)($input['price'] ?? 0);
+    $curr     = sanitize($input['currency'] ?? 'BHD');
+    $pUrl     = trim($input['product_url'] ?? '');
+    $dUrl     = trim($input['demo_url'] ?? '');
     $platform = sanitize($input['display_platform'] ?? 'instagram');
 
-    if (!$name) apiError('Product name is required.');
+    if (!$name)  apiError('Product name is required.');
     if ($price < 0) apiError('Price cannot be negative.');
-    if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
-    if (!$pUrl) apiError('Product URL is required.');
+    if (!$pUrl)  apiError('Product URL is required.');
+
+    // CPC/CPL always come from admin points_config — client cannot set these
+    $rates   = getEffectiveRates($db, 0, 0);
+    $cpcRate = $rates['cpc_rate'];
+    $cplRate = $rates['cpl_rate'];
 
     // Save images
     $img1 = saveBase64Image($input['image_1'] ?? null);
@@ -158,13 +172,15 @@ if ($action === 'create') {
     $stmt->execute([$clientId, $name, $cat, $desc, $price, $cpcRate, $cplRate, $curr, $mainImg, $img1, $img2, $img3, $vid, $platform]);
     $newId = $db->lastInsertId();
 
-    apiSuccess(['id' => $newId], 'Product created successfully');
+    $get = $db->prepare("SELECT * FROM products WHERE id = ?");
+    $get->execute([$newId]);
+    apiSuccess($get->fetch(), 'Product created successfully');
 }
 
 // ─── Update Product ───────────────────────────
 if ($action === 'update') {
     $id = (int)($input['id'] ?? 0);
-    
+
     // Verify ownership
     $chk = $db->prepare("SELECT * FROM products WHERE id = ? AND client_id = ?");
     $chk->execute([$id, $clientId]);
@@ -173,21 +189,24 @@ if ($action === 'update') {
         apiError('Product not found or access denied.', 404);
     }
 
-    $name = sanitize($input['name'] ?? '');
-    $cat = sanitize($input['category'] ?? 'Other');
-    $desc = sanitize($input['description'] ?? '');
-    $price = (float)($input['price'] ?? 0);
-    $cpcRate = (float)($input['cpc_rate'] ?? 0.020);
-    $cplRate = (float)($input['cpl_rate'] ?? 0.200);
-    $curr = sanitize($input['currency'] ?? 'BHD');
-    $pUrl = trim($input['product_url'] ?? '');
-    $dUrl = trim($input['demo_url'] ?? '');
+    $name     = sanitize($input['name'] ?? '');
+    $cat      = sanitize($input['category'] ?? 'Other');
+    $desc     = sanitize($input['description'] ?? '');
+    $price    = (float)($input['price'] ?? 0);
+    $curr     = sanitize($input['currency'] ?? 'BHD');
+    $pUrl     = trim($input['product_url'] ?? '');
+    $dUrl     = trim($input['demo_url'] ?? '');
     $platform = sanitize($input['display_platform'] ?? 'instagram');
 
-    if (!$name) apiError('Product name is required.');
+    if (!$name)  apiError('Product name is required.');
     if ($price < 0) apiError('Price cannot be negative.');
-    if ($cpcRate < 0 || $cplRate < 0) apiError('Deduction rates cannot be negative.');
-    if (!$pUrl) apiError('Product URL is required.');
+    if (!$pUrl)  apiError('Product URL is required.');
+
+    // CPC/CPL: If admin has set a product-level override (non-zero), keep it.
+    // Otherwise, pull latest from points_config. Client cannot set these.
+    $rates   = getEffectiveRates($db, $existingProd['cpc_rate'], $existingProd['cpl_rate']);
+    $cpcRate = $rates['cpc_rate'];
+    $cplRate = $rates['cpl_rate'];
 
     // Process images: if not passed, use existing value
     $img1 = isset($input['image_1']) ? saveBase64Image($input['image_1']) : $existingProd['image_url_1'];
@@ -209,7 +228,8 @@ if ($action === 'update') {
 
     $stmt = $db->prepare("
         UPDATE products 
-        SET name = ?, category = ?, description = ?, price = ?, cpc_rate = ?, cpl_rate = ?, currency = ?, image_url = ?, image_url_1 = ?, image_url_2 = ?, image_url_3 = ?, video_url = ?, display_platform = ? 
+        SET name = ?, category = ?, description = ?, price = ?, cpc_rate = ?, cpl_rate = ?, currency = ?, 
+            image_url = ?, image_url_1 = ?, image_url_2 = ?, image_url_3 = ?, video_url = ?, display_platform = ? 
         WHERE id = ? AND client_id = ?
     ");
     $stmt->execute([$name, $cat, $desc, $price, $cpcRate, $cplRate, $curr, $mainImg, $img1, $img2, $img3, $vid, $platform, $id, $clientId]);
@@ -231,3 +251,5 @@ if ($action === 'delete') {
     $stmt->execute([$id, $clientId]);
     apiSuccess(null, 'Product deleted successfully');
 }
+
+apiError('Invalid action');

@@ -136,4 +136,18 @@ if ($action === 'my_points') {
     ]);
 }
 
+// ─── Client Rates (read-only, accessible by client/admin) ────
+if ($action === 'client_rates') {
+    requireAuth();
+    $cfg = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
+    $cpcDefault  = $cfg ? (float)$cfg['click_value_per_point']              : 0.001;
+    $cplDefault  = $cfg ? (float)$cfg['vendor_conversion_value_per_point']  : 0.020;
+    $currency    = $cfg ? $cfg['currency'] : 'BHD';
+    apiSuccess([
+        'cpc_rate' => $cpcDefault,
+        'cpl_rate' => $cplDefault,
+        'currency' => $currency,
+    ]);
+}
+
 apiError('Invalid action');
