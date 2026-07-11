@@ -282,6 +282,8 @@ CREATE TABLE IF NOT EXISTS `client_wallet_transactions` (
   `type`           ENUM('credit','debit') NOT NULL,
   `payment_method` ENUM('cash','bank_transfer','cheque','qr_pay','system') NOT NULL,
   `note`           TEXT,
+  `status`         ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved',
+  `screenshot_url` VARCHAR(255) DEFAULT NULL,
   `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`client_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -297,6 +299,31 @@ CREATE TABLE IF NOT EXISTS `lead_calls` (
   FOREIGN KEY (`event_id`) REFERENCES `events`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: lead_calls", $log, $errors);
+
+// Migration: Add bank/benefit fields to points_config
+try {
+    $pcCols = $db->query("DESCRIBE `points_config`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('bank_details', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `bank_details` TEXT DEFAULT NULL", "Migration: Add bank_details to points_config", $log, $errors);
+    }
+    if (!in_array('benefit_qr_url', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `benefit_qr_url` VARCHAR(255) DEFAULT NULL", "Migration: Add benefit_qr_url to points_config", $log, $errors);
+    }
+    if (!in_array('cheque_details', $pcCols)) {
+        run($db, "ALTER TABLE `points_config` ADD COLUMN `cheque_details` TEXT DEFAULT NULL", "Migration: Add cheque_details to points_config", $log, $errors);
+    }
+} catch (Exception $e) {}
+
+// Migration: Add status and screenshot_url to client_wallet_transactions
+try {
+    $cwtCols = $db->query("DESCRIBE `client_wallet_transactions`")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('status', $cwtCols)) {
+        run($db, "ALTER TABLE `client_wallet_transactions` ADD COLUMN `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved'", "Migration: Add status to client_wallet_transactions", $log, $errors);
+    }
+    if (!in_array('screenshot_url', $cwtCols)) {
+        run($db, "ALTER TABLE `client_wallet_transactions` ADD COLUMN `screenshot_url` VARCHAR(255) DEFAULT NULL", "Migration: Add screenshot_url to client_wallet_transactions", $log, $errors);
+    }
+} catch (Exception $e) {}
 
 
 // ─── Seed Data ────────────────────────────────

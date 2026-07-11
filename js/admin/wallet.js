@@ -10,6 +10,7 @@ App.Admin.Wallet = (function ($) {
   var _dtClient = null;
   var _dtTx = null;
   var _dtTxClient = null;
+  var _dtPendingClient = null;
 
   var paymentMethodLabels = {
     cash: '💵 Cash',
@@ -126,6 +127,32 @@ App.Admin.Wallet = (function ($) {
           </div>
         </div>
 
+        <!-- Pending Top Up Requests -->
+        <div class="card" style="margin-bottom:24px; border:1px solid #F59E0B">
+          <div class="card-header" style="background:rgba(245,158,11,0.05); display:flex; justify-content:space-between; align-items:center"><span class="card-title" style="color:#D97706">📋 Pending Credit / Top-Up Requests</span></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrapper" style="padding:16px">
+              <table id="tbl-client-pending-requests" class="dataTable" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Vendor Name</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Uploaded Receipt</th>
+                    <th>Transaction Note</th>
+                    <th>Submitted Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-muted)">Loading pending requests...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Client Statements History -->
         <div class="card">
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
@@ -145,6 +172,7 @@ App.Admin.Wallet = (function ($) {
                     <th>Ledger Impact</th>
                     <th>Payment Method</th>
                     <th>Amount</th>
+                    <th>Status</th>
                     <th>Transaction Note</th>
                     <th>Date & Time</th>
                   </tr>
@@ -312,12 +340,60 @@ App.Admin.Wallet = (function ($) {
 
   function loadClientTransactions(clientId) {
     App.api.clients.ledger(clientId).done(function(res){
-      var data = res.data || [];
+      var allData = res.data || [];
+      
+      // Filter pending credits
+      var pendingData = allData.filter(function(tx) {
+        return tx.type === 'credit' && tx.status === 'pending';
+      });
+
+      // 1. Populate Pending Credit Requests
+      if ($.fn.DataTable.isDataTable('#tbl-client-pending-requests')) {
+        $('#tbl-client-pending-requests').DataTable().destroy();
+      }
+      $('#tbl-client-pending-requests tbody').empty();
+
+      _dtPendingClient = $('#tbl-client-pending-requests').DataTable({
+        data: pendingData,
+        pageLength: 5,
+        order: [[6, 'asc']],
+        columns: [
+          { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false },
+          { data: 'client_name', render: function(d){ return `<strong>${d}</strong>`; } },
+          { data: 'amount', render: function(d){ return `<strong style="color:#22C55E">+${parseFloat(d).toFixed(3)} BHD</strong>`; } },
+          { data: 'payment_method', render: function(d){ return paymentMethodLabels[d] || d || '—'; } },
+          { data: 'screenshot_url', render: function(d){
+              return d 
+                ? `<a href="${d}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:0.75rem;padding:3px 8px;font-weight:700">🖼️ View Receipt ↗</a>`
+                : `<span style="color:var(--text-muted);font-size:0.8rem">No receipt file</span>`;
+            }
+          },
+          { data: 'note', render: function(d){ return `<span style="color:var(--text-muted);font-size:0.88rem">${d||'—'}</span>`; } },
+          { 
+            data: 'created_at', 
+            render: function(d, type){ 
+              if (type === 'sort' || type === 'type') return d ? new Date(d).getTime() : 0;
+              return d ? new Date(d).toLocaleString() : '—'; 
+            } 
+          },
+          { data: null, orderable:false, render: function(d,t,r){
+              return `
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-success btn-sm btn-approve-topup" data-id="${r.id}" data-client="${r.client_name}" data-amount="${r.amount}">Approve</button>
+                  <button class="btn btn-danger btn-sm btn-reject-topup" data-id="${r.id}">Reject</button>
+                </div>
+              `;
+            }
+          }
+        ]
+      });
+
+      // 2. Populate Main ledger history
       if (_dtTxClient) { _dtTxClient.destroy(); }
       _dtTxClient = $('#tbl-client-transactions').DataTable({
-        data: data,
+        data: allData,
         pageLength: 10,
-        order: [[6,'desc']],
+        order: [[7,'desc']],
         columns: [
           { data: null, render: function(d,t,r,m){ return m.row+1; }, orderable:false },
           { data: 'client_name', render: function(d){ return `<strong>${d}</strong>`; } },
@@ -334,7 +410,21 @@ App.Admin.Wallet = (function ($) {
               return `<span style="font-weight:700;color:${color}">${prefix}${parseFloat(d).toFixed(3)} BHD</span>`; 
             } 
           },
-          { data: 'note', render: function(d){ return `<span style="color:var(--text-muted);font-size:0.88rem">${d||'—'}</span>`; } },
+          { data: 'status', render: function(d,t,r){
+              if (r.type === 'debit') return '<span class="badge badge-muted">Auto</span>';
+              if (d === 'approved') return '<span class="badge badge-success">Approved</span>';
+              if (d === 'rejected') return '<span class="badge badge-danger">Rejected</span>';
+              return '<span class="badge" style="background:#F59E0B;color:#fff">Pending Approval</span>';
+            }
+          },
+          { data: 'note', render: function(d,t,r){ 
+              var html = `<span style="color:var(--text-muted);font-size:0.88rem">${d||'—'}</span>`; 
+              if (r.screenshot_url) {
+                html += `<br><a href="${r.screenshot_url}" target="_blank" style="font-size:0.75rem;color:var(--primary);font-weight:700;text-decoration:none">🖼️ View Receipt ↗</a>`;
+              }
+              return html;
+            } 
+          },
           { 
             data: 'created_at', 
             render: function(d, type){ 
@@ -392,6 +482,66 @@ App.Admin.Wallet = (function ($) {
     // Client transactions filter
     $('#filter-client-select').off('change').on('change', function(){
       loadClientTransactions($(this).val());
+    });
+
+    // Approve Top Up Credit Request
+    $(document).off('click', '.btn-approve-topup').on('click', '.btn-approve-topup', function() {
+      var txId = $(this).data('id');
+      var client = $(this).data('client');
+      var amount = parseFloat($(this).data('amount'));
+
+      Swal.fire({
+        title: 'Approve Top-Up Credit?',
+        text: `Are you sure you want to approve the credit request of BHD ${amount.toFixed(3)} for ${client}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '✅ Yes, Approve',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#22C55E',
+        cancelButtonColor: '#6b7280'
+      }).then(function(result) {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: 'api/clients.php?action=approve_reject_topup',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ tx_id: txId, status: 'approved' }),
+            dataType: 'json'
+          }).done(function(res) {
+            Swal.fire({ icon: 'success', title: 'Approved!', text: res.message, timer: 1500, showConfirmButton: false });
+            loadClientWallets(); // Refresh balance tables
+          }).fail(App.api.handleError);
+        }
+      });
+    });
+
+    // Reject Top Up Credit Request
+    $(document).off('click', '.btn-reject-topup').on('click', '.btn-reject-topup', function() {
+      var txId = $(this).data('id');
+
+      Swal.fire({
+        title: 'Reject Top-Up Credit?',
+        text: 'Are you sure you want to reject this payment credit request?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '✕ Yes, Reject',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6b7280'
+      }).then(function(result) {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: 'api/clients.php?action=approve_reject_topup',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ tx_id: txId, status: 'rejected' }),
+            dataType: 'json'
+          }).done(function(res) {
+            Swal.fire({ icon: 'success', title: 'Rejected', text: res.message, timer: 1500, showConfirmButton: false });
+            loadClientWallets(); // Refresh balance tables
+          }).fail(App.api.handleError);
+        }
+      });
     });
 
     $(document).off('click','.btn-transfer').on('click','.btn-transfer', function(){

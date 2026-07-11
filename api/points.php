@@ -8,7 +8,7 @@ $input  = getInput();
 
 // ─── Get Points Config ────────────────────────
 if ($action === 'config') {
-    requireAdmin();
+    requireAuth();
     $cfg = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
     apiSuccess($cfg ?: [
         'conversions_per_point' => 100,
@@ -35,15 +35,41 @@ if ($action === 'update_config') {
     $v_cpp  = max(1, (int)($input['vendor_conversions_per_point'] ?? 100));
     $v_cvpp = max(0.001, (float)($input['vendor_conversion_value_per_point'] ?? 2));
     $curr = sanitize($input['currency'] ?? 'BHD');
+    $bank = sanitize($input['bank_details'] ?? '');
+    $qr = sanitize($input['benefit_qr_url'] ?? '');
+    $cheque = sanitize($input['cheque_details'] ?? '');
 
     $exists = $db->query("SELECT id FROM points_config LIMIT 1")->fetch();
     if ($exists) {
-        $db->prepare("UPDATE points_config SET conversions_per_point=?,value_per_point=?,clicks_per_point=?,click_value_per_point=?,vendor_clicks_per_point=?,vendor_click_value_per_point=?,vendor_conversions_per_point=?,vendor_conversion_value_per_point=?,currency=?")->execute([$cpp,$vpp,$clpp,$clvpp,$v_clpp,$v_clvpp,$v_cpp,$v_cvpp,$curr]);
+        $db->prepare("UPDATE points_config SET conversions_per_point=?,value_per_point=?,clicks_per_point=?,click_value_per_point=?,vendor_clicks_per_point=?,vendor_click_value_per_point=?,vendor_conversions_per_point=?,vendor_conversion_value_per_point=?,currency=?,bank_details=?,benefit_qr_url=?,cheque_details=?")->execute([$cpp,$vpp,$clpp,$clvpp,$v_clpp,$v_clvpp,$v_cpp,$v_cvpp,$curr,$bank,$qr,$cheque]);
     } else {
-        $db->prepare("INSERT INTO points_config (conversions_per_point,value_per_point,clicks_per_point,click_value_per_point,vendor_clicks_per_point,vendor_click_value_per_point,vendor_conversions_per_point,vendor_conversion_value_per_point,currency) VALUES (?,?,?,?,?,?,?,?,?)")->execute([$cpp,$vpp,$clpp,$clvpp,$v_clpp,$v_clvpp,$v_cpp,$v_cvpp,$curr]);
+        $db->prepare("INSERT INTO points_config (conversions_per_point,value_per_point,clicks_per_point,click_value_per_point,vendor_clicks_per_point,vendor_click_value_per_point,vendor_conversions_per_point,vendor_conversion_value_per_point,currency,bank_details,benefit_qr_url,cheque_details) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$cpp,$vpp,$clpp,$clvpp,$v_clpp,$v_clvpp,$v_cpp,$v_cvpp,$curr,$bank,$qr,$cheque]);
     }
     $cfg = $db->query("SELECT * FROM points_config ORDER BY id DESC LIMIT 1")->fetch();
     apiSuccess($cfg, 'Points configuration saved');
+}
+
+// ─── Upload Benefit QR Code ───────────────────
+if ($action === 'upload_qr') {
+    requireAdmin();
+    if (!isset($_FILES['qr_code']) || $_FILES['qr_code']['error'] !== UPLOAD_ERR_OK) {
+        apiError('No file uploaded or file upload error.');
+    }
+    $ext = strtolower(pathinfo($_FILES['qr_code']['name'], PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'svg', 'webp'];
+    if (!in_array($ext, $allowed)) {
+        apiError('Only image files (JPG, PNG, SVG, WEBP) are allowed.');
+    }
+    $dir = __DIR__ . '/../uploads/config/';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+    $filename = 'benefit_qr_' . time() . '.' . $ext;
+    if (move_uploaded_file($_FILES['qr_code']['tmp_name'], $dir . $filename)) {
+        apiSuccess(['url' => 'uploads/config/' . $filename], 'QR Code uploaded');
+    } else {
+        apiError('Failed to save uploaded QR Code.');
+    }
 }
 
 // ─── Get Influencer Points Summary ────────────

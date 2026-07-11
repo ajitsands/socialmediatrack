@@ -143,7 +143,7 @@ if ($action === 'wallet_transactions') {
     $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
     $stmt = $db->prepare("
-        SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.created_at, u.name as client_name
+        SELECT wt.id, wt.amount, wt.type, wt.payment_method, wt.note, wt.status, wt.screenshot_url, wt.created_at, u.name as client_name
         FROM client_wallet_transactions wt
         JOIN users u ON u.id = wt.client_id
         $where
@@ -245,6 +245,93 @@ if ($action === 'delete_wallet_transaction') {
     } catch (Exception $e) {
         $db->rollBack();
         apiError('Failed to delete transaction: ' . $e->getMessage());
+    }
+}
+
+// ─── Client Submits Top-Up Proof ──────────────────
+if ($action === 'submit_topup') {
+    requireAuth();
+    if ($_SESSION['role'] !== 'client') {
+        apiError('Unauthorized: Only clients can submit top-up requests.');
+    }
+    $clientId = (int)$_SESSION['user_id'];
+    $amount = (float)($_POST['amount'] ?? 0);
+    $paymentMethod = sanitize($_POST['payment_method'] ?? 'bank_transfer');
+    $note = sanitize($_POST['note'] ?? '');
+
+    if ($amount <= 0) apiError('Please enter a valid positive amount.');
+    
+    $validMethods = ['bank_transfer', 'qr_pay', 'cheque'];
+    if (!in_array($paymentMethod, $validMethods)) {
+        apiError('Invalid payment method.');
+    }
+
+    $screenshotUrl = null;
+    if (isset($_FILES['screenshot']) && $_FILES['screenshot']['error'] === UPLOAD_ERR_OK) {
+        $ext = strtolower(pathinfo($_FILES['screenshot']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'svg', 'webp', 'pdf'];
+        if (!in_array($ext, $allowed)) {
+            apiError('Only image/PDF receipt files are allowed.');
+        }
+        $dir = __DIR__ . '/../uploads/receipts/';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        $filename = 'receipt_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+        if (move_uploaded_file($_FILES['screenshot']['tmp_name'], $dir . $filename)) {
+            $screenshotUrl = 'uploads/receipts/' . $filename;
+        } else {
+            apiError('Failed to save receipt file.');
+        }
+    } else {
+        if ($paymentMethod !== 'cheque') {
+            apiError('Receipt screenshot/proof is required for this payment method.');
+        }
+    }
+
+    $stmt = $db->prepare("
+        INSERT INTO client_wallet_transactions (client_id, amount, type, payment_method, note, status, screenshot_url) 
+        VALUES (?, ?, 'credit', ?, ?, 'pending', ?)
+    ");
+    $stmt->execute([$clientId, $amount, $paymentMethod, $note, $screenshotUrl]);
+
+    apiSuccess([], 'Top-up request submitted successfully! It is pending approval by the Admin.');
+}
+
+// ─── Approve / Reject Client Top-up Request ──────
+if ($action === 'approve_reject_topup') {
+    requireAdmin();
+    $txId = (int)($input['tx_id'] ?? 0);
+    $status = sanitize($input['status'] ?? ''); // 'approved' or 'rejected'
+
+    if (!$txId) apiError('Transaction ID is required.');
+    if (!in_array($status, ['approved', 'rejected'])) apiError('Invalid status.');
+
+    // Fetch transaction
+    $stmt = $db->prepare("SELECT * FROM client_wallet_transactions WHERE id = ?");
+    $stmt->execute([$txId]);
+    $tx = $stmt->fetch();
+    if (!$tx) apiError('Transaction not found.', 404);
+    if ($tx['status'] !== 'pending') apiError('Transaction is already processed.');
+
+    try {
+        $db->beginTransaction();
+
+        // 1. Update status
+        $updStatus = $db->prepare("UPDATE client_wallet_transactions SET status = ? WHERE id = ?");
+        $updStatus->execute([$status, $txId]);
+
+        // 2. If approved, add to client's wallet balance
+        if ($status === 'approved') {
+            $updBalance = $db->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
+            $updBalance->execute([$tx['amount'], $tx['client_id']]);
+        }
+
+        $db->commit();
+        apiSuccess([], 'Transaction has been ' . $status . ' successfully.');
+    } catch (Exception $e) {
+        $db->rollBack();
+        apiError('Failed to process request: ' . $e->getMessage());
     }
 }
 

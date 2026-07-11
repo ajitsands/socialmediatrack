@@ -220,7 +220,7 @@ if ($action === 'wallet_history') {
     $where = 'WHERE ' . implode(' AND ', $conditions);
 
     $stmt = $db->prepare("
-        SELECT id, amount, type, payment_method, note, created_at
+        SELECT id, amount, type, payment_method, note, status, screenshot_url, created_at
         FROM client_wallet_transactions
         $where
         ORDER BY created_at DESC

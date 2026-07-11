@@ -124,6 +124,42 @@ App.Admin.Points = (function ($) {
             </select>
           </div>
 
+          <h3 style="margin-top:28px;margin-bottom:16px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--border);padding-bottom:8px">💳 Vendor Payment Details & Instructions</h3>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px">
+            <div>
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">🏦 Bank Transfer Details</label>
+                <textarea class="form-control" id="cfg-bank-details" rows="4" placeholder="Enter Account Name, IBAN, Bank Name, Account Number..." style="font-family:inherit;font-size:0.88rem"></textarea>
+                <div class="form-hint">Displayed to clients when selecting Bank Transfer.</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">✍️ Cheque Submission Details</label>
+                <textarea class="form-control" id="cfg-cheque-details" rows="4" placeholder="Enter instructions on cheque submission (where to drop/send cheques)..." style="font-family:inherit;font-size:0.88rem"></textarea>
+                <div class="form-hint">Displayed to clients when selecting Cheque payment.</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="form-group">
+                <label class="form-label">📱 BenefitPay QR Image</label>
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">
+                  <div id="benefit-qr-preview" style="width:120px;height:120px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--badge-bg);overflow:hidden">
+                    <span style="font-size:0.75rem;color:var(--text-muted)">No QR Code</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <input type="file" id="btn-upload-qr-file" style="display:none" accept="image/*">
+                    <button class="btn btn-secondary btn-sm" id="btn-trigger-upload-qr" type="button" style="padding:6px 12px;font-size:0.82rem">📤 Upload QR</button>
+                    <button class="btn btn-danger btn-sm" id="btn-remove-qr" style="display:none;padding:6px 12px;font-size:0.82rem" type="button">✕ Remove</button>
+                  </div>
+                </div>
+                <input type="hidden" id="cfg-benefit-qr-url">
+                <div class="form-hint">Upload the QR Code image that clients scan to pay via BenefitPay.</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Calculation Preview -->
           <div style="background:linear-gradient(135deg,rgba(108,99,255,0.08),rgba(255,101,132,0.06));border:1px solid var(--primary-light);border-radius:12px;padding:16px;margin-bottom:20px" id="points-preview">
             <div style="font-size:0.8rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">💡 Preview</div>
@@ -169,6 +205,18 @@ App.Admin.Points = (function ($) {
       $('#cfg-vendor-conv-vpp').val(d.vendor_conversion_value_per_point);
       
       $('#cfg-currency').val(d.currency);
+      
+      $('#cfg-bank-details').val(d.bank_details || '');
+      $('#cfg-cheque-details').val(d.cheque_details || '');
+      $('#cfg-benefit-qr-url').val(d.benefit_qr_url || '');
+      if (d.benefit_qr_url) {
+        $('#benefit-qr-preview').html(`<img src="${d.benefit_qr_url}" style="width:100%;height:100%;object-fit:contain" />`);
+        $('#btn-remove-qr').show();
+      } else {
+        $('#benefit-qr-preview').html('<span style="font-size:0.75rem;color:var(--text-muted)">No QR Code</span>');
+        $('#btn-remove-qr').hide();
+      }
+
       triggerPreview();
     });
   }
@@ -250,6 +298,53 @@ App.Admin.Points = (function ($) {
       triggerPreview();
     });
 
+    // Trigger QR Upload file picker
+    $(document).on('click', '#btn-trigger-upload-qr', function() {
+      $('#btn-upload-qr-file').click();
+    });
+
+    // Handle QR Upload
+    $(document).on('change', '#btn-upload-qr-file', function() {
+      var file = this.files[0];
+      if (!file) return;
+
+      var formData = new FormData();
+      formData.append('qr_code', file);
+      
+      var $btn = $('#btn-trigger-upload-qr').prop('disabled', true).text('Uploading...');
+      
+      $.ajax({
+        url: 'api/points.php?action=upload_qr',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        dataType: 'json'
+      }).done(function(res) {
+        if (res.success) {
+          var url = res.data.url;
+          $('#cfg-benefit-qr-url').val(url);
+          $('#benefit-qr-preview').html(`<img src="${url}" style="width:100%;height:100%;object-fit:contain" />`);
+          $('#btn-remove-qr').show();
+          Swal.fire({ icon:'success', title:'Uploaded!', text:'BenefitPay QR Code uploaded successfully.', timer:1500, showConfirmButton:false });
+        } else {
+          Swal.fire({ icon:'error', title:'Upload Failed', text:res.message });
+        }
+      }).fail(function(xhr) {
+        Swal.fire({ icon:'error', title:'Error', text:'Failed to upload QR code image.' });
+      }).always(function() {
+        $btn.prop('disabled', false).text('📤 Upload QR');
+      });
+    });
+
+    // Handle QR Remove
+    $(document).on('click', '#btn-remove-qr', function() {
+      $('#cfg-benefit-qr-url').val('');
+      $('#benefit-qr-preview').html('<span style="font-size:0.75rem;color:var(--text-muted)">No QR Code</span>');
+      $(this).hide();
+      $('#btn-upload-qr-file').val('');
+    });
+
     $(document).on('click','#btn-save-points', function(){
       var data = {
         conversions_per_point: parseInt($('#cfg-cpp').val()),
@@ -263,6 +358,9 @@ App.Admin.Points = (function ($) {
         vendor_conversion_value_per_point: parseFloat($('#cfg-vendor-conv-vpp').val()),
         
         currency: $('#cfg-currency').val(),
+        bank_details: $('#cfg-bank-details').val(),
+        cheque_details: $('#cfg-cheque-details').val(),
+        benefit_qr_url: $('#cfg-benefit-qr-url').val()
       };
       
       if (!data.conversions_per_point || data.conversions_per_point < 1 ||

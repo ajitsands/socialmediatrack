@@ -169,19 +169,19 @@ header("Pragma: no-cache");
 <script src="js/admin/products.js?v=1.2.9"></script>
 <script src="js/admin/campaigns.js?v=1.2.6"></script>
 <script src="js/admin/analytics.js?v=1.2.6"></script>
-<script src="js/admin/points.js?v=1.2.6"></script>
-<script src="js/admin/wallet.js?v=1.2.6"></script>
+<script src="js/admin/points.js?v=1.2.7"></script>
+<script src="js/admin/wallet.js?v=1.2.7"></script>
 
 <!-- Influencer modules -->
 <script src="js/influencer/dashboard.js?v=1.2.9"></script>
-<script src="js/influencer/wallet.js?v=1.2.6"></script>
+<script src="js/influencer/wallet.js?v=1.2.7"></script>
 <script src="js/influencer/profile.js?v=1.3.1"></script>
 
 <!-- Client modules -->
 <script src="js/client/dashboard.js?v=1.2.6"></script>
 <script src="js/client/products.js?v=1.3.1"></script>
 <script src="js/client/crm.js?v=1.2.6"></script>
-<script src="js/client/wallet.js?v=1.2.6"></script>
+<script src="js/client/wallet.js?v=1.2.7"></script>
 <script src="js/client/influencers.js?v=1.3.1"></script>
 
 <!-- Router (boot last) -->
