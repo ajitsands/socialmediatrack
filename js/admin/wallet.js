@@ -39,7 +39,7 @@ App.Admin.Wallet = (function ($) {
       <!-- Tabs Navigation -->
       <div style="display:flex;gap:12px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:12px">
         <button class="btn btn-primary tab-trigger" data-target="panel-influencer" style="font-weight:600">👤 Influencer Ledger</button>
-        <button class="btn btn-secondary tab-trigger" data-target="panel-client" style="font-weight:600">🏢 Vendor (Client) Ledger</button>
+        <button class="btn btn-secondary tab-trigger" data-target="panel-client" style="font-weight:600">🏢 Vendor (Client) Ledger <span id="pending-topup-badge" style="display:none;background:#EF4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.72rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-left:6px;vertical-align:middle">0</span></button>
       </div>
 
       <!-- INFLUENCER PANEL -->
@@ -129,7 +129,10 @@ App.Admin.Wallet = (function ($) {
 
         <!-- Pending Top Up Requests -->
         <div class="card" style="margin-bottom:24px; border:1px solid #F59E0B">
-          <div class="card-header" style="background:rgba(245,158,11,0.05); display:flex; justify-content:space-between; align-items:center"><span class="card-title" style="color:#D97706">📋 Pending Credit / Top-Up Requests</span></div>
+          <div class="card-header" style="background:rgba(245,158,11,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+            <span class="card-title" style="color:#D97706">📋 Pending Credit / Top-Up Requests</span>
+            <button class="btn btn-secondary btn-sm" id="btn-goto-payment-config" style="font-size:0.8rem;padding:5px 12px" title="Configure bank details, QR code, and cheque instructions shown to clients">⚙️ Configure Payment Methods</button>
+          </div>
           <div class="card-body" style="padding:0">
             <div class="table-wrapper" style="padding:16px">
               <table id="tbl-client-pending-requests" class="dataTable" style="width:100%">
@@ -353,6 +356,14 @@ App.Admin.Wallet = (function ($) {
       }
       $('#tbl-client-pending-requests tbody').empty();
 
+      // Update pending badge on tab button
+      var pendingCount = pendingData.length;
+      if (pendingCount > 0) {
+        $('#pending-topup-badge').text(pendingCount).css('display', 'inline-flex');
+      } else {
+        $('#pending-topup-badge').css('display', 'none');
+      }
+
       _dtPendingClient = $('#tbl-client-pending-requests').DataTable({
         data: pendingData,
         pageLength: 5,
@@ -472,6 +483,23 @@ App.Admin.Wallet = (function ($) {
       
       $('.tab-panel').hide();
       $('#' + target).show();
+    });
+
+    // Navigate to Points Config (payment methods setup)
+    $(document).off('click', '#btn-goto-payment-config').on('click', '#btn-goto-payment-config', function(){
+      if (window.App && App.router) {
+        App.router.navigate('points');
+      } else {
+        // Fallback: trigger nav click
+        $('[data-page="points"], [href*="points"], .nav-item[data-route="points"]').first().click();
+      }
+      Swal.fire({
+        icon: 'info',
+        title: 'Payment Configuration',
+        html: 'Scroll down to the <strong>💳 Vendor Payment Details</strong> section to set:<br><br>🏦 Bank Transfer Details<br>📱 BenefitPay QR Code<br>✍️ Cheque Instructions',
+        confirmButtonColor: '#6C63FF',
+        confirmButtonText: 'Got it'
+      });
     });
 
     // Influencer transactions filter

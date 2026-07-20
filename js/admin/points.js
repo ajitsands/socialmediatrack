@@ -124,7 +124,17 @@ App.Admin.Points = (function ($) {
             </select>
           </div>
 
-          <h3 style="margin-top:28px;margin-bottom:16px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--border);padding-bottom:8px">💳 Vendor Payment Details & Instructions</h3>
+          <div style="background:rgba(108,99,255,0.07);border:1.5px solid var(--primary-light);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+            <span style="font-size:1.4rem;line-height:1">📢</span>
+            <div style="font-size:0.88rem;line-height:1.6">
+              <strong style="color:var(--primary);font-size:0.95rem">Client Top-Up Payment Instructions</strong><br>
+              The details below are displayed to <strong>clients (vendors)</strong> in their Wallet page under <em>"How to Top Up Funds"</em>. 
+              Set accurate bank details, upload your BenefitPay QR, and write cheque drop-off instructions so clients know exactly how to send funds.<br>
+              <span style="font-size:0.82rem;color:var(--text-muted)">After a client submits proof, go to <strong>💰 Wallet → Vendor tab</strong> to approve and credit their account.</span>
+            </div>
+          </div>
+
+          <h3 style="margin-top:0;margin-bottom:16px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--border);padding-bottom:8px">💳 Vendor Payment Details & Instructions</h3>
           
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px">
             <div>
