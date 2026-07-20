@@ -397,15 +397,41 @@ App.Admin.Campaigns = (function ($) {
         .always(function(){ $btn.prop('disabled',false).html('⚡ ' + App.i18n.t('generate') + ' Tracking Links'); });
     });
 
-    // Copy link
+    // Copy link — works on both HTTP and HTTPS
+    function copyToClipboard(text, onSuccess) {
+      if (navigator.clipboard && window.isSecureContext) {
+        // HTTPS / localhost: use modern API
+        navigator.clipboard.writeText(text).then(onSuccess).catch(function() {
+          _execCommandCopy(text, onSuccess);
+        });
+      } else {
+        // HTTP (e.g. local IP): use legacy execCommand
+        _execCommandCopy(text, onSuccess);
+      }
+    }
+    function _execCommandCopy(text, onSuccess) {
+      var el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      try {
+        document.execCommand('copy');
+        onSuccess();
+      } catch(e) {
+        prompt('Copy this link:', text);
+      }
+      document.body.removeChild(el);
+    }
+
     $(document).off('click', '.btn-copy-link').on('click','.btn-copy-link', function(){
-      // Read raw token from data-token attribute to avoid HTML-encoding issues with encrypted values
       var token = $(this).data('token') || $(this).attr('data-token');
       var base  = window.location.origin + window.location.pathname.replace(/\/?(index\.php)?$/, '/');
       var link  = token ? (base + 'landing.php?ref=' + encodeURIComponent(token)) : $(this).data('link');
-      navigator.clipboard.writeText(link).then(function(){
-        Swal.fire({ icon:'success', title:'Link Copied!', text:'Tracking link copied to clipboard.', showConfirmButton:false, timer:1500 });
-      }).catch(function(){ prompt('Copy this link:', link); });
+      copyToClipboard(link, function(){
+        Swal.fire({ icon:'success', title:'Link Copied!', text: link, showConfirmButton:false, timer:2500 });
+      });
     });
 
     // Delete campaign
