@@ -230,6 +230,9 @@ CREATE TABLE IF NOT EXISTS `points_config` (
   `vendor_conversion_value_per_point` DECIMAL(10,3) DEFAULT 2.000,
   `value_per_point`      DECIMAL(10,3) DEFAULT 1.000,
   `currency`             VARCHAR(10) DEFAULT 'BHD',
+  `bank_details`         TEXT DEFAULT NULL,
+  `benefit_qr_url`       VARCHAR(500) DEFAULT NULL,
+  `cheque_details`       TEXT DEFAULT NULL,
   `updated_at`           TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ", "Table: points_config", $log, $errors);
