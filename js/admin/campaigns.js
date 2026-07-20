@@ -301,9 +301,8 @@ App.Admin.Campaigns = (function ($) {
             }
           },
           { data: null, orderable:false, render: function(d,t,r){
-              var landingUrl = window.location.origin + window.location.pathname.replace('index.php','') + 'landing.php?ref=' + encodeURIComponent(r.ref_token);
               return `<div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="btn btn-secondary btn-sm btn-copy-link" data-link="${landingUrl}" title="Copy Link">📋</button>
+                <button class="btn btn-secondary btn-sm btn-copy-link" data-token="${r.ref_token}" title="Copy Link">📋</button>
                 <button class="btn btn-danger btn-sm btn-del-camp" data-id="${r.id}" title="Delete">🗑️</button>
               </div>`;
             }
@@ -400,7 +399,10 @@ App.Admin.Campaigns = (function ($) {
 
     // Copy link
     $(document).off('click', '.btn-copy-link').on('click','.btn-copy-link', function(){
-      var link = $(this).data('link');
+      // Read raw token from data-token attribute to avoid HTML-encoding issues with encrypted values
+      var token = $(this).data('token') || $(this).attr('data-token');
+      var base  = window.location.origin + window.location.pathname.replace(/\/?(index\.php)?$/, '/');
+      var link  = token ? (base + 'landing.php?ref=' + encodeURIComponent(token)) : $(this).data('link');
       navigator.clipboard.writeText(link).then(function(){
         Swal.fire({ icon:'success', title:'Link Copied!', text:'Tracking link copied to clipboard.', showConfirmButton:false, timer:1500 });
       }).catch(function(){ prompt('Copy this link:', link); });
