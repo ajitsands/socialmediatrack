@@ -2,13 +2,14 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/config.php';
 
-requireAdmin();
+requireAuth();
 $db     = getDB();
 $action = param('action', 'list');
 $input  = getInput();
 
 // ─── List Clients ─────────────────────────────
 if ($action === 'list') {
+    requireAdmin();
     $stmt = $db->query("
         SELECT u.id, u.name, u.email, u.phone, u.country_code, u.company_category, u.wallet_balance, u.status, u.profile_locked, u.created_at,
                COUNT(p.id) as total_products
@@ -23,6 +24,7 @@ if ($action === 'list') {
 
 // ─── Get Single Client ────────────────────────
 if ($action === 'get') {
+    requireAdmin();
     $id   = (int)param('id');
     $stmt = $db->prepare("SELECT id, name, email, phone, country_code, company_category, wallet_balance, status, profile_locked, created_at FROM users WHERE id = ? AND role = 'client'");
     $stmt->execute([$id]);
@@ -33,6 +35,7 @@ if ($action === 'get') {
 
 // ─── Create Client ────────────────────────────
 if ($action === 'create') {
+    requireAdmin();
     $name   = sanitize($input['name'] ?? '');
     $email  = trim($input['email'] ?? '');
     $pass   = trim($input['password'] ?? '');
@@ -64,6 +67,7 @@ if ($action === 'create') {
 
 // ─── Update Client ────────────────────────────
 if ($action === 'update') {
+    requireAdmin();
     $id     = (int)($input['id'] ?? 0);
     $name   = sanitize($input['name'] ?? '');
     $email  = trim($input['email'] ?? '');
@@ -99,6 +103,7 @@ if ($action === 'update') {
 
 // ─── Toggle Client Status ─────────────────────
 if ($action === 'toggle_status') {
+    requireAdmin();
     $id = (int)($input['id'] ?? 0);
     if (!$id) apiError('ID required.');
     $stmt = $db->prepare("UPDATE users SET status = IF(status='active','inactive','active') WHERE id = ? AND role = 'client'");
@@ -111,6 +116,7 @@ if ($action === 'toggle_status') {
 
 // ─── Delete Client ────────────────────────────
 if ($action === 'delete') {
+    requireAdmin();
     $id = (int)($input['id'] ?? 0);
     if (!$id) apiError('ID required.');
     $stmt = $db->prepare("DELETE FROM users WHERE id = ? AND role = 'client'");
@@ -120,7 +126,12 @@ if ($action === 'delete') {
 
 // ─── Ledger Transactions List ────────────────
 if ($action === 'wallet_transactions') {
-    $clientId  = (int)param('client_id', 0);
+    $sess = $_SESSION;
+    if ($sess['role'] === 'client') {
+        $clientId = (int)$sess['user_id'];
+    } else {
+        $clientId = (int)param('client_id', 0);
+    }
     $dateFrom  = param('date_from', '');
     $dateTo    = param('date_to', '');
 
@@ -155,6 +166,7 @@ if ($action === 'wallet_transactions') {
 
 // ─── Add Credit/Debit Funds to Wallet ──────────────
 if ($action === 'add_funds') {
+    requireAdmin();
     $clientId       = (int)($input['client_id'] ?? 0);
     $amount         = (float)($input['amount'] ?? 0);
     $paymentMethod  = sanitize($input['payment_method'] ?? 'cash');
@@ -207,6 +219,7 @@ if ($action === 'add_funds') {
 
 // ─── Delete Manual Wallet Transaction ────────────
 if ($action === 'delete_wallet_transaction') {
+    requireAdmin();
     $txId = (int)($input['id'] ?? 0);
     if (!$txId) apiError('Transaction ID is required.');
 
