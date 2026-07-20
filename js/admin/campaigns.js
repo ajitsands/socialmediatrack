@@ -430,7 +430,7 @@ App.Admin.Campaigns = (function ($) {
       var base  = window.location.origin + window.location.pathname.replace(/\/?(index\.php)?$/, '/');
       var link  = token ? (base + 'landing.php?ref=' + encodeURIComponent(token)) : $(this).data('link');
       copyToClipboard(link, function(){
-        Swal.fire({ icon:'success', title:'Link Copied!', text: link, showConfirmButton:false, timer:2500 });
+        Swal.fire({ icon:'success', title:'Link Copied!', showConfirmButton:false, timer:1500 });
       });
     });
 
