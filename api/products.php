@@ -98,13 +98,45 @@ if ($action === 'update') {
     apiSuccess($get->fetch(), 'Product updated successfully');
 }
 
-// ─── Delete Product ───────────────────────────
+// ─── Delete Product (cascade-safe) ───────────
 if ($action === 'delete') {
     $id = (int)($input['id'] ?? 0);
     if (!$id) apiError('ID required.');
-    $stmt = $db->prepare("DELETE FROM products WHERE id=?");
-    $stmt->execute([$id]);
-    apiSuccess([], 'Product deleted');
+
+    // Only allow deleting inactive products (safety gate)
+    $check = $db->prepare("SELECT status FROM products WHERE id=?");
+    $check->execute([$id]);
+    $prod = $check->fetch();
+    if (!$prod) apiError('Product not found.', 404);
+    if ($prod['status'] === 'active') apiError('Deactivate the product before deleting it.', 400);
+
+    try {
+        $db->beginTransaction();
+
+        // 1. Delete events linked to this product's campaigns
+        $db->prepare("
+            DELETE e FROM events e
+            JOIN campaigns c ON c.id = e.campaign_id
+            WHERE c.product_id = ?
+        ")->execute([$id]);
+
+        // 2. Delete campaigns
+        $db->prepare("DELETE FROM campaigns WHERE product_id = ?")->execute([$id]);
+
+        // 3. Delete campaign requests
+        $db->prepare("DELETE FROM campaign_requests WHERE product_id = ?")->execute([$id]);
+
+        // 4. Delete the product itself
+        $db->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
+
+        $db->commit();
+        // Note: wallet_transactions and client_wallet_transactions are NOT touched.
+        // Financial records (influencer earnings, vendor deductions) are preserved.
+        apiSuccess([], 'Product and its campaigns deleted. All financial records preserved.');
+    } catch (Exception $e) {
+        $db->rollBack();
+        apiError('Delete failed: ' . $e->getMessage(), 500);
+    }
 }
 
 // ─── Toggle Status ────────────────────────────
