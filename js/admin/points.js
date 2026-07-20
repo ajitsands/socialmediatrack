@@ -294,17 +294,17 @@ App.Admin.Points = (function ($) {
   }
 
   function bindEvents() {
-    $(document).on('input', 'input[id^="cfg-"], select#cfg-currency', function(){
+    $(document).off('input', 'input[id^="cfg-"], select#cfg-currency').on('input', 'input[id^="cfg-"], select#cfg-currency', function(){
       triggerPreview();
     });
 
     // Trigger QR Upload file picker
-    $(document).on('click', '#btn-trigger-upload-qr', function() {
+    $(document).off('click', '#btn-trigger-upload-qr').on('click', '#btn-trigger-upload-qr', function() {
       $('#btn-upload-qr-file').click();
     });
 
     // Handle QR Upload
-    $(document).on('change', '#btn-upload-qr-file', function() {
+    $(document).off('change', '#btn-upload-qr-file').on('change', '#btn-upload-qr-file', function() {
       var file = this.files[0];
       if (!file) return;
 
@@ -338,14 +338,14 @@ App.Admin.Points = (function ($) {
     });
 
     // Handle QR Remove
-    $(document).on('click', '#btn-remove-qr', function() {
+    $(document).off('click', '#btn-remove-qr').on('click', '#btn-remove-qr', function() {
       $('#cfg-benefit-qr-url').val('');
       $('#benefit-qr-preview').html('<span style="font-size:0.75rem;color:var(--text-muted)">No QR Code</span>');
       $(this).hide();
       $('#btn-upload-qr-file').val('');
     });
 
-    $(document).on('click','#btn-save-points', function(){
+    $(document).off('click', '#btn-save-points').on('click','#btn-save-points', function(){
       var data = {
         conversions_per_point: parseInt($('#cfg-cpp').val()),
         value_per_point: parseFloat($('#cfg-vpp').val()),

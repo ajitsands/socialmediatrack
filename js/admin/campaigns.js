@@ -301,7 +301,7 @@ App.Admin.Campaigns = (function ($) {
             }
           },
           { data: null, orderable:false, render: function(d,t,r){
-              var landingUrl = 'landing.php?ref=' + encodeURIComponent(r.ref_token);
+              var landingUrl = window.location.origin + window.location.pathname.replace('index.php','') + 'landing.php?ref=' + encodeURIComponent(r.ref_token);
               return `<div style="display:flex;gap:6px;flex-wrap:wrap">
                 <button class="btn btn-secondary btn-sm btn-copy-link" data-link="${landingUrl}" title="Copy Link">📋</button>
                 <button class="btn btn-danger btn-sm btn-del-camp" data-id="${r.id}" title="Delete">🗑️</button>
@@ -399,7 +399,7 @@ App.Admin.Campaigns = (function ($) {
     });
 
     // Copy link
-    $(document).on('click','.btn-copy-link', function(){
+    $(document).off('click', '.btn-copy-link').on('click','.btn-copy-link', function(){
       var link = $(this).data('link');
       navigator.clipboard.writeText(link).then(function(){
         Swal.fire({ icon:'success', title:'Link Copied!', text:'Tracking link copied to clipboard.', showConfirmButton:false, timer:1500 });
@@ -407,7 +407,7 @@ App.Admin.Campaigns = (function ($) {
     });
 
     // Delete campaign
-    $(document).on('click','.btn-del-camp', function(){
+    $(document).off('click', '.btn-del-camp').on('click','.btn-del-camp', function(){
       var id = $(this).data('id');
       Swal.fire({ icon:'warning', title:'Delete Campaign?', text:'This will permanently delete the campaign and all tracking data.', showCancelButton:true, confirmButtonColor:'#ef4444', confirmButtonText:'Yes, Delete' })
         .then(function(r){ if(r.isConfirmed) App.api.campaigns.delete(id).done(function(){ Swal.fire({icon:'success',title:'Deleted!',showConfirmButton:false,timer:1200}); loadTable(); }).fail(App.api.handleError); });
@@ -421,7 +421,7 @@ App.Admin.Campaigns = (function ($) {
     });
 
     // Row checkbox change
-    $(document).on('change', '.campaign-bulk-chk', function(){
+    $(document).off('change', '.campaign-bulk-chk').on('change', '.campaign-bulk-chk', function(){
       var allChecked = $('.campaign-bulk-chk').length === $('.campaign-bulk-chk:checked').length;
       $('#chk-select-all-campaigns').prop('checked', allChecked);
       updateBulkDeleteButton();

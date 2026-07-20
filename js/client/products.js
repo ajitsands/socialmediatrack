@@ -525,7 +525,7 @@ App.Client.Products = (function ($) {
     });
 
     // Edit product click
-    $(document).on('click', '#tbl-client-products .btn-edit', function () {
+    $(document).off('click', '#tbl-client-products .btn-edit').on('click', '#tbl-client-products .btn-edit', function () {
       var id = $(this).closest('tr').data('id');
       App.api.clientProducts.get(id)
         .done(function (res) {
@@ -579,7 +579,7 @@ App.Client.Products = (function ($) {
     });
 
     // Delete product click
-    $(document).on('click', '#tbl-client-products .btn-delete', function () {
+    $(document).off('click', '#tbl-client-products .btn-delete').on('click', '#tbl-client-products .btn-delete', function () {
       var id = $(this).closest('tr').data('id');
       Swal.fire({
         title: 'Are you sure?',

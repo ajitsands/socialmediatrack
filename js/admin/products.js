@@ -256,7 +256,7 @@ App.Admin.Products = (function ($) {
   }
 
   function bindEvents() {
-    $(document).on('click','#btn-add-product', function(){
+    $(document).off('click', '#btn-add-product').on('click','#btn-add-product', function(){
       $('#modal-prod-title').text(App.i18n.t('add_product'));
       $('#form-product')[0].reset();
       $('#prod-id').val('');
@@ -267,7 +267,7 @@ App.Admin.Products = (function ($) {
       $('#modal-product').show();
     });
 
-    $(document).on('click','.btn-edit-prod', function(){
+    $(document).off('click', '.btn-edit-prod').on('click','.btn-edit-prod', function(){
       var id = $(this).data('id');
       App.api.products.get(id).done(function(res){
         var r = res.data;
@@ -290,9 +290,9 @@ App.Admin.Products = (function ($) {
       }).fail(App.api.handleError);
     });
 
-    $(document).on('click','#btn-close-modal-prod, #btn-cancel-prod', function(){ $('#modal-product').hide(); });
+    $(document).off('click', '#btn-close-modal-prod, #btn-cancel-prod').on('click','#btn-close-modal-prod, #btn-cancel-prod', function(){ $('#modal-product').hide(); });
 
-    $(document).on('click','#btn-save-prod', function(){
+    $(document).off('click', '#btn-save-prod').on('click','#btn-save-prod', function(){
       var data = {
         id: $('#prod-id').val()||null, 
         name: $('#prod-name').val(),
@@ -318,13 +318,13 @@ App.Admin.Products = (function ($) {
       }).fail(App.api.handleError).always(function(){ $btn.prop('disabled',false).html('💾 '+App.i18n.t('save')); });
     });
 
-    $(document).on('click','.btn-del-prod', function(){
+    $(document).off('click', '.btn-del-prod').on('click','.btn-del-prod', function(){
       var id = $(this).data('id');
       Swal.fire({ icon:'warning', title:App.i18n.t('delete_product'), text:App.i18n.t('confirm_delete_prod'), showCancelButton:true, confirmButtonColor:'#ef4444', confirmButtonText:App.i18n.t('delete') })
         .then(function(r){ if(r.isConfirmed) App.api.products.delete(id).done(function(){ Swal.fire({icon:'success',title:'Deleted!',showConfirmButton:false,timer:1200}); loadTable(); }).fail(App.api.handleError); });
     });
 
-    $(document).on('click','[data-toggle-prod-id]', function(){
+    $(document).off('click', '[data-toggle-prod-id]').on('click','[data-toggle-prod-id]', function(){
       var id = $(this).data('toggle-prod-id');
       App.api.products.toggleStatus(id).done(function(res){ loadTable(); Swal.fire({icon:'success',title:'Status: '+res.data.status,showConfirmButton:false,timer:1000}); }).fail(App.api.handleError);
     });

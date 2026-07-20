@@ -387,7 +387,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Edit Client button click
-    $(document).on('click', '#tbl-clients .btn-edit', function () {
+    $(document).off('click', '#tbl-clients .btn-edit').on('click', '#tbl-clients .btn-edit', function () {
       var id = $(this).closest('tr').data('id');
       App.api.clients.get(id)
         .done(function (res) {
@@ -414,7 +414,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Toggle Status change
-    $(document).on('change', '#tbl-clients .toggle-client-status', function () {
+    $(document).off('change', '#tbl-clients .toggle-client-status').on('change', '#tbl-clients .toggle-client-status', function () {
       var id = $(this).closest('tr').data('id');
       App.api.clients.toggleStatus(id)
         .done(function (res) {
@@ -427,7 +427,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Delete Client
-    $(document).on('click', '#tbl-clients .btn-delete', function () {
+    $(document).off('click', '#tbl-clients .btn-delete').on('click', '#tbl-clients .btn-delete', function () {
       var id = $(this).closest('tr').data('id');
       Swal.fire({
         title: 'Delete Client account?',
@@ -451,7 +451,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Open Wallet / Ledger Modal
-    $(document).on('click', '#tbl-clients .btn-wallet', function () {
+    $(document).off('click', '#tbl-clients .btn-wallet').on('click', '#tbl-clients .btn-wallet', function () {
       var id = $(this).closest('tr').data('id');
       _activeClientIdForWallet = id;
 
@@ -476,14 +476,14 @@ App.Admin.Clients = (function ($) {
     });
 
     // Date range filter change
-    $(document).on('change', '#ledger-date-from, #ledger-date-to', function () {
+    $(document).off('change', '#ledger-date-from, #ledger-date-to').on('change', '#ledger-date-from, #ledger-date-to', function () {
       if (_activeClientIdForWallet) {
         loadLedgerDetails(_activeClientIdForWallet, $('#ledger-date-from').val(), $('#ledger-date-to').val());
       }
     });
 
     // Delete manual wallet transaction
-    $(document).on('click', '.btn-delete-wallet-tx', function () {
+    $(document).off('click', '.btn-delete-wallet-tx').on('click', '.btn-delete-wallet-tx', function () {
       var txId = $(this).data('id');
       Swal.fire({
         title: 'Delete this transaction?',
@@ -506,7 +506,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Show/hide Credit/Debit toggle for System Adjust
-    $(document).on('change', '#wallet-payment-method', function () {
+    $(document).off('change', '#wallet-payment-method').on('change', '#wallet-payment-method', function () {
       var isSystem = $(this).val() === 'system';
       $('#system-adjust-type-row').toggle(isSystem);
       if (!isSystem) {
@@ -516,7 +516,7 @@ App.Admin.Clients = (function ($) {
     });
 
     // Update button label when credit/debit radio changes
-    $(document).on('change', 'input[name="system-tx-type"]', function () {
+    $(document).off('change', 'input[name="system-tx-type"]').on('change', 'input[name="system-tx-type"]', function () {
       var isDebit = $(this).val() === 'debit';
       $('#btn-wallet-submit')
         .text(isDebit ? '➖ Record Transaction (Debit)' : '💰 Record Transaction (Credit)')

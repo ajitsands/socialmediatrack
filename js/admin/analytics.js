@@ -283,7 +283,7 @@ App.Admin.Analytics = (function ($) {
   }
 
   function bindEvents() {
-    $(document).on('click', '.tab-analytics-btn', function(){
+    $(document).off('click', '.tab-analytics-btn').on('click', '.tab-analytics-btn', function(){
       var tab = $(this).data('tab');
       $('.tab-analytics-btn').removeClass('active');
       $(this).addClass('active');
@@ -294,14 +294,14 @@ App.Admin.Analytics = (function ($) {
       if ($.fn.DataTable.isDataTable(tableId)) { $(tableId).DataTable().columns.adjust().draw(); }
     });
 
-    $(document).on('click', '.chart-range-btn', function(){
+    $(document).off('click', '.chart-range-btn').on('click', '.chart-range-btn', function(){
       var days = $(this).data('days');
       $('.chart-range-btn').removeClass('active');
       $(this).addClass('active');
       loadChart(days);
     });
 
-    $(document).on('change', '#visitor-product-filter', function(){
+    $(document).off('change', '#visitor-product-filter').on('change', '#visitor-product-filter', function(){
       var pId = $(this).val();
       loadVisitors(pId);
     });
